@@ -105,28 +105,28 @@ export default async function HomePage() {
       )}
 
       {featuredReviews.length > 0 && (
-        <section className="bg-gradient-to-b from-brand-50/40 to-white px-4 py-20">
+        <section className="bg-dark-950 px-4 py-20">
           <div className="mx-auto max-w-7xl">
             <div className="mb-10 text-center">
-              <span className="text-sm font-bold uppercase tracking-widest text-brand-600">Depoimentos</span>
-              <h2 className="mt-2 text-2xl font-extrabold text-dark-900 sm:text-3xl">O que dizem sobre nós</h2>
+              <span className="text-sm font-bold uppercase tracking-widest text-brand-400">Depoimentos</span>
+              <h2 className="mt-2 text-2xl font-extrabold text-white sm:text-3xl">O que dizem sobre nós</h2>
             </div>
-            <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="flex gap-6 overflow-x-auto pb-4 snap-x snap-mandatory scrollbar-hide" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
               {featuredReviews.map((review) => (
-                <div key={review.id} className="rounded-2xl border border-dark-100 bg-white p-6 shadow-premium transition-all duration-300 hover:-translate-y-1 hover:shadow-premium-lg">
+                <div key={review.id} className="min-w-[300px] max-w-[340px] shrink-0 snap-center rounded-2xl border border-dark-700 bg-dark-900/80 p-6 shadow-2xl transition-all duration-300 hover:border-brand-500/40 hover:bg-dark-800/80">
                   <div className="mb-3 flex gap-1">
                     {Array.from({ length: 5 }).map((_, i) => (
-                      <Star key={i} className={`h-4 w-4 ${i < review.rating ? 'fill-brand-400 text-brand-400' : 'text-dark-300'}`} />
+                      <Star key={i} className={`h-4 w-4 ${i < review.rating ? 'fill-brand-400 text-brand-400' : 'text-dark-600'}`} />
                     ))}
                   </div>
                   {review.comment && (
-                    <p className="mb-4 line-clamp-3 text-sm text-dark-600">&ldquo;{review.comment}&rdquo;</p>
+                    <p className="mb-4 line-clamp-3 text-sm text-dark-300">&ldquo;{review.comment}&rdquo;</p>
                   )}
                   <div className="flex items-center gap-3">
                     <div className="flex h-8 w-8 items-center justify-center rounded-full bg-brand-600 text-xs font-bold text-white">
                       {(review.user?.name || 'A')[0].toUpperCase()}
                     </div>
-                    <p className="text-sm font-medium text-dark-600">{review.user?.name || 'Anônimo'}</p>
+                    <p className="text-sm font-medium text-dark-200">{review.user?.name || 'Anônimo'}</p>
                   </div>
                 </div>
               ))}
