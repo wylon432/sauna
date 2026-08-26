@@ -2,6 +2,8 @@ import Link from 'next/link';
 import { ArrowLeft, Shield } from 'lucide-react';
 import prisma from '@/lib/prisma';
 
+export const dynamic = 'force-dynamic';
+
 export const metadata = {
   title: 'Regras da Sauna | Sauna e Espaço da Janice',
   description: 'Confira todas as regras, orientações e termos de utilização da sauna e piscina.',

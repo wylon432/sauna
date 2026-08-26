@@ -3,6 +3,8 @@ import { MessageCircle, CreditCard, Sparkles, Clock, Users, Info, ArrowRight } f
 import prisma from '@/lib/prisma';
 import { formatCurrency, getWhatsAppLink } from '@/lib/utils';
 
+export const dynamic = 'force-dynamic';
+
 export const metadata = {
   title: 'Aluguel do Espaço | Sauna e Espaço da Janice',
   description: 'Alugue nosso espaço para festas e eventos. Veja pacotes, valores e condições de pagamento.',

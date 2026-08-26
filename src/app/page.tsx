@@ -4,6 +4,8 @@ import prisma from '@/lib/prisma';
 import { formatDate, getWhatsAppLink } from '@/lib/utils';
 import HeroSection from '@/components/layout/HeroSection';
 
+export const dynamic = 'force-dynamic';
+
 export default async function HomePage() {
   const [latestNews, activeAnnouncements, featuredReviews, whatsappSetting] = await Promise.all([
     prisma.news.findMany({

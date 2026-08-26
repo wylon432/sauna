@@ -3,6 +3,8 @@ import { Clock, Users, Utensils, Wine, MessageCircle, CalendarCheck, Sparkles, A
 import prisma from '@/lib/prisma';
 import { getWhatsAppLink, GENDERS, DAYS_OF_WEEK } from '@/lib/utils';
 
+export const dynamic = 'force-dynamic';
+
 export const metadata = {
   title: 'Sauna e Espaço da Janice',
   description: 'Conheça nossos horários de sauna masculina e feminina, regras de utilização, alimentação e bebidas.',

@@ -2,6 +2,8 @@ import { Sparkles } from 'lucide-react';
 import prisma from '@/lib/prisma';
 import GaleriaClient from './GaleriaClient';
 
+export const dynamic = 'force-dynamic';
+
 export const metadata = {
   title: 'Galeria de Fotos | Sauna e Espaço da Janice',
   description: 'Veja as fotos do nosso espaço de sauna, piscina e área de festas.',

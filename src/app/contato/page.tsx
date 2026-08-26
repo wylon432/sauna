@@ -2,6 +2,8 @@ import { Phone, MessageCircle, Clock, MapPin, Sparkles } from 'lucide-react';
 import prisma from '@/lib/prisma';
 import { getWhatsAppLink } from '@/lib/utils';
 
+export const dynamic = 'force-dynamic';
+
 export const metadata = {
   title: 'Contato | Sauna e Espaço da Janice',
   description: 'Entre em contato conosco. Estamos prontos para ajudar!',

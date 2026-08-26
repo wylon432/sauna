@@ -3,6 +3,8 @@ import prisma from '@/lib/prisma';
 import { GENDERS, DAYS_OF_WEEK, formatDate } from '@/lib/utils';
 import DisponibilidadeClient from './DisponibilidadeClient';
 
+export const dynamic = 'force-dynamic';
+
 export const metadata = {
   title: 'Disponibilidade | Sauna e Espaço da Janice',
   description: 'Confira a disponibilidade da sauna e do espaço para aluguel.',

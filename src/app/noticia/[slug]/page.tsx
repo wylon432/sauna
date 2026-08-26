@@ -4,6 +4,8 @@ import { ArrowLeft, Calendar, User, Clock } from 'lucide-react';
 import prisma from '@/lib/prisma';
 import { formatDate, formatDateTime } from '@/lib/utils';
 
+export const dynamic = 'force-dynamic';
+
 export const metadata = {
   title: 'Notícia | Sauna e Espaço da Janice',
 };

@@ -3,6 +3,8 @@ import { ArrowRight, Calendar, Newspaper } from 'lucide-react';
 import prisma from '@/lib/prisma';
 import { formatDate } from '@/lib/utils';
 
+export const dynamic = 'force-dynamic';
+
 export const metadata = {
   title: 'Notícias | Sauna e Espaço da Janice',
   description: 'Fique por dentro das novidades do nosso espaço.',

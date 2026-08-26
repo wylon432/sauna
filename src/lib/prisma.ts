@@ -16,7 +16,6 @@ function createPrismaClient() {
         authToken: process.env.TURSO_AUTH_TOKEN,
       });
       const adapter = new PrismaLibSQL(client);
-      // @ts-expect-error - adapter support added in Prisma 6+, using require for runtime
       return new PrismaClient({ adapter });
     } catch {
       return new PrismaClient();
