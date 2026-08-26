@@ -53,7 +53,7 @@ export default function HeroSection({ whatsappPhone }: HeroSectionProps) {
                 className="group inline-flex items-center gap-3 rounded-2xl bg-green-600 px-10 py-5 text-base font-bold text-white shadow-2xl shadow-green-600/40 transition-all duration-500 hover:bg-green-500 hover:shadow-green-500/50 hover:-translate-y-1"
               >
                 <MessageCircle className="h-5 w-5" />
-                Reservar pelo WhatsApp
+                Reservar Espaço pelo WhatsApp
                 <ArrowRight className="h-4 w-4 transition-transform duration-300 group-hover:translate-x-1" />
               </a>
             )}
