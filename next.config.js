@@ -6,6 +6,9 @@ const nextConfig = {
       { protocol: 'https', hostname: 'lh3.googleusercontent.com' },
     ],
   },
+  experimental: {
+    serverComponentsExternalPackages: ['@prisma/adapter-libsql', '@libsql/client'],
+  },
   headers: async () => [
     {
       source: '/(.*)',
