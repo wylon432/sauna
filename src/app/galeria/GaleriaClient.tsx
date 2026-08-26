@@ -28,7 +28,7 @@ interface SerializedImage {
 }
 
 function isVideoUrl(url: string): boolean {
-  return /\.(mp4|webm|ogg|mov)(\?|$)/i.test(url);
+  return /\.(mp4|webm|ogg|mov)(\?|$)/i.test(url) || url.startsWith('data:video');
 }
 
 function MediaThumbnail({ image, className }: { image: SerializedImage; className?: string }) {
