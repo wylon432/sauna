@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { ArrowRight, MessageCircle, PartyPopper, Thermometer } from 'lucide-react';
+import { ArrowRight, MessageCircle, PartyPopper, Thermometer, Calendar, Phone } from 'lucide-react';
 import Typewriter from '@/components/ui/Typewriter';
 import { getWhatsAppLink } from '@/lib/utils';
 
@@ -12,51 +12,52 @@ interface HeroSectionProps {
 export default function HeroSection({ whatsappPhone }: HeroSectionProps) {
   return (
     <>
-      <section className="relative flex min-h-[85vh] items-center justify-center overflow-hidden bg-gradient-to-b from-white via-brand-50/30 to-white px-4">
+      <section className="relative flex min-h-screen items-center justify-center overflow-hidden bg-black px-4">
         <div className="absolute inset-0">
-          <div className="absolute left-[10%] top-[20%] h-[500px] w-[500px] rounded-full bg-brand-500/8 blur-[120px] animate-glow-pulse" />
-          <div className="absolute bottom-[10%] right-[10%] h-[400px] w-[400px] rounded-full bg-brand-400/6 blur-[100px] animate-glow-pulse [animation-delay:1.5s]" />
+          <div className="absolute left-[5%] top-[10%] h-[600px] w-[600px] rounded-full bg-brand-500/10 blur-[150px] animate-glow-pulse" />
+          <div className="absolute bottom-[5%] right-[5%] h-[500px] w-[500px] rounded-full bg-brand-600/8 blur-[130px] animate-glow-pulse [animation-delay:2s]" />
+          <div className="absolute left-[40%] top-[50%] h-[300px] w-[300px] rounded-full bg-white/3 blur-[100px]" />
         </div>
 
-        <div className="relative z-10 mx-auto max-w-5xl text-center">
-          <div className="mb-8 inline-flex items-center gap-2 rounded-full border border-brand-200 bg-brand-100/60 px-5 py-2.5">
+        <div className="relative z-10 mx-auto max-w-6xl text-center">
+          <div className="mb-8 inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-5 py-2.5 backdrop-blur-sm">
             <span className="h-2 w-2 rounded-full bg-brand-500 animate-pulse" />
-            <span className="text-sm font-semibold text-brand-700">Sauna, Piscina & Eventos</span>
+            <span className="text-sm font-semibold text-white/80">Sauna, Piscina & Eventos</span>
           </div>
 
-          <h1 className="text-4xl font-extrabold leading-[1.1] text-dark-900 sm:text-5xl md:text-6xl lg:text-7xl">
+          <h1 className="text-4xl font-extrabold leading-[1.1] sm:text-5xl md:text-6xl lg:text-8xl">
             <Typewriter
               words={['Sauna e Espaço da Janice']}
-              typingSpeed={90}
+              typingSpeed={80}
               deletingSpeed={50}
               pauseTime={5000}
-              className="bg-gradient-to-r from-dark-900 via-brand-600 to-dark-900 bg-clip-text text-transparent"
+              className="bg-gradient-to-b from-white via-white to-white/60 bg-clip-text text-transparent"
             />
           </h1>
 
-          <div className="mx-auto my-8 h-px w-32 bg-gradient-to-r from-transparent via-brand-400 to-transparent" />
+          <div className="mx-auto my-8 h-px w-40 bg-gradient-to-r from-transparent via-brand-500 to-transparent" />
 
-          <p className="mx-auto max-w-2xl text-lg text-dark-600 sm:text-xl">
+          <p className="mx-auto max-w-2xl text-lg text-white/60 sm:text-xl">
             Seu espaço para relaxar, aproveitar e celebrar.
           </p>
-          <p className="mx-auto mt-3 max-w-xl text-base text-dark-500">
-            Sauna, piscina e aluguel de espaço para festas e eventos.
+          <p className="mx-auto mt-3 max-w-xl text-base text-white/40">
+            Sauna, piscina e aluguel de espaço para festas e eventos com infraestrutura completa.
           </p>
 
-          <div className="mt-12 flex flex-col items-center justify-center gap-4 sm:flex-row">
+          <div className="mt-14 flex flex-col items-center justify-center gap-4 sm:flex-row">
             {whatsappPhone && (
               <a
                 href={getWhatsAppLink(whatsappPhone, 'Olá! Gostaria de saber mais informações sobre a Sauna e Espaço da Janice e verificar a disponibilidade para reserva.')}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="group inline-flex items-center gap-3 rounded-2xl bg-green-600 px-10 py-4 text-sm font-bold text-white shadow-xl shadow-green-600/30 transition-all duration-300 hover:bg-green-500 hover:shadow-2xl hover:shadow-green-500/40 hover:-translate-y-1"
+                className="group inline-flex items-center gap-3 rounded-2xl bg-green-600 px-10 py-5 text-base font-bold text-white shadow-2xl shadow-green-600/40 transition-all duration-500 hover:bg-green-500 hover:shadow-green-500/50 hover:-translate-y-1"
               >
                 <MessageCircle className="h-5 w-5" />
                 Reservar pelo WhatsApp
                 <ArrowRight className="h-4 w-4 transition-transform duration-300 group-hover:translate-x-1" />
               </a>
             )}
-            <Link href="/sauna" className="group inline-flex items-center gap-3 rounded-2xl border-2 border-dark-200 bg-white px-10 py-4 text-sm font-bold text-dark-800 transition-all duration-300 hover:border-brand-300 hover:bg-brand-50 hover:-translate-y-1">
+            <Link href="/sauna" className="group inline-flex items-center gap-3 rounded-2xl border border-white/20 bg-white/5 px-10 py-5 text-base font-bold text-white backdrop-blur-sm transition-all duration-500 hover:border-brand-500/50 hover:bg-white/10 hover:-translate-y-1">
               <Thermometer className="h-5 w-5" />
               Conhecer Sauna
               <ArrowRight className="h-4 w-4 transition-transform duration-300 group-hover:translate-x-1" />
@@ -66,14 +67,14 @@ export default function HeroSection({ whatsappPhone }: HeroSectionProps) {
       </section>
 
       {/* Service Cards */}
-      <section className="relative z-20 mx-auto max-w-7xl px-4 pb-20 pt-16 sm:px-6 lg:px-8">
+      <section className="relative z-20 mx-auto max-w-7xl px-4 pb-24 pt-16 sm:px-6 lg:px-8">
         <div className="grid gap-8 sm:grid-cols-2">
-          <Link href="/sauna" className="group rounded-2xl border border-dark-100 bg-white p-8 shadow-2xl shadow-black/5 transition-all duration-300 hover:shadow-3xl hover:-translate-y-2">
-            <div className="mb-5 inline-flex h-14 w-14 items-center justify-center rounded-2xl bg-brand-100 transition-colors duration-300 group-hover:bg-brand-600">
-              <Thermometer className="h-7 w-7 text-brand-600 transition-colors duration-300 group-hover:text-white" />
+          <Link href="/sauna" className="group rounded-3xl border border-dark-100 bg-white p-10 shadow-2xl shadow-black/5 transition-all duration-500 hover:shadow-3xl hover:-translate-y-2">
+            <div className="mb-6 inline-flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-brand-500 to-brand-600 shadow-lg shadow-brand-500/30 transition-all duration-300 group-hover:scale-110">
+              <Thermometer className="h-8 w-8 text-white" />
             </div>
-            <h2 className="mb-3 text-xl font-extrabold text-dark-900">Sauna & Piscina</h2>
-            <p className="mb-6 text-dark-500">
+            <h2 className="mb-3 text-2xl font-extrabold text-dark-900">Sauna & Piscina</h2>
+            <p className="mb-6 text-base leading-relaxed text-dark-500">
               Aproveite nossos horários de sauna e piscina. Ambiente aconchegante, seguro e com
               toda a estrutura para seu conforto.
             </p>
@@ -83,12 +84,12 @@ export default function HeroSection({ whatsappPhone }: HeroSectionProps) {
             </span>
           </Link>
 
-          <Link href="/aluguel" className="group rounded-2xl border border-dark-100 bg-white p-8 shadow-2xl shadow-black/5 transition-all duration-300 hover:shadow-3xl hover:-translate-y-2">
-            <div className="mb-5 inline-flex h-14 w-14 items-center justify-center rounded-2xl bg-dark-900 transition-colors duration-300 group-hover:bg-brand-600">
-              <PartyPopper className="h-7 w-7 text-white transition-colors duration-300" />
+          <Link href="/aluguel" className="group rounded-3xl border border-dark-100 bg-white p-10 shadow-2xl shadow-black/5 transition-all duration-500 hover:shadow-3xl hover:-translate-y-2">
+            <div className="mb-6 inline-flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-dark-800 to-dark-900 shadow-lg shadow-dark-900/30 transition-all duration-300 group-hover:scale-110">
+              <PartyPopper className="h-8 w-8 text-white" />
             </div>
-            <h2 className="mb-3 text-xl font-extrabold text-dark-900">Aluguel para Festas</h2>
-            <p className="mb-6 text-dark-500">
+            <h2 className="mb-3 text-2xl font-extrabold text-dark-900">Aluguel para Festas</h2>
+            <p className="mb-6 text-base leading-relaxed text-dark-500">
               Alugue nosso espaço para sua festa ou evento. Pacotes flexíveis, estrutura completa
               e localização privilegiada.
             </p>
