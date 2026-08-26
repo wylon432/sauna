@@ -152,36 +152,39 @@ export default function Header() {
 
       {/* Mobile Menu */}
       {mobileOpen && (
-        <div className="fixed inset-x-0 top-16 bottom-0 z-40 border-t border-dark-100 bg-white/98 backdrop-blur-xl lg:hidden animate-fade-in">
-          <nav className="mx-auto max-w-7xl space-y-1 px-4 py-6">
-            {navLinks.map((link) => (
-              <Link
-                key={link.href}
-                href={link.href}
-                onClick={() => setMobileOpen(false)}
-                className={`flex items-center rounded-xl px-4 py-3.5 text-sm font-semibold transition-all duration-200 ${
-                  isActive(link.href)
-                    ? 'bg-brand-50 text-brand-700 border-l-4 border-brand-600'
-                    : 'text-dark-600 hover:bg-dark-50 hover:text-dark-900'
-                }`}
-              >
-                {link.label}
-              </Link>
-            ))}
-            {!session && (
-              <div className="mt-4 border-t border-dark-100 pt-4">
+        <>
+          <div className="fixed inset-0 top-16 z-30 bg-black/50 backdrop-blur-sm lg:hidden" onClick={() => setMobileOpen(false)} />
+          <div className="fixed inset-x-0 top-16 bottom-0 z-40 overflow-y-auto bg-white shadow-2xl lg:hidden animate-fade-in">
+            <nav className="mx-auto max-w-7xl space-y-1 px-4 py-6">
+              {navLinks.map((link) => (
                 <Link
-                  href="/login"
+                  key={link.href}
+                  href={link.href}
                   onClick={() => setMobileOpen(false)}
-                  className="flex items-center justify-center gap-2 rounded-xl bg-brand-600 px-6 py-3 text-sm font-bold text-white"
+                  className={`flex items-center rounded-xl px-4 py-4 text-base font-semibold transition-all duration-200 ${
+                    isActive(link.href)
+                      ? 'bg-brand-50 text-brand-700 border-l-4 border-brand-600'
+                      : 'text-dark-600 hover:bg-dark-50 hover:text-dark-900'
+                  }`}
                 >
-                  <LogIn className="h-4 w-4" />
-                  Entrar
+                  {link.label}
                 </Link>
-              </div>
-            )}
-          </nav>
-        </div>
+              ))}
+              {!session && (
+                <div className="mt-4 border-t border-dark-100 pt-4">
+                  <Link
+                    href="/login"
+                    onClick={() => setMobileOpen(false)}
+                    className="flex items-center justify-center gap-2 rounded-xl bg-brand-600 px-6 py-3.5 text-base font-bold text-white"
+                  >
+                    <LogIn className="h-4 w-4" />
+                    Entrar
+                  </Link>
+                </div>
+              )}
+            </nav>
+          </div>
+        </>
       )}
     </header>
   );
