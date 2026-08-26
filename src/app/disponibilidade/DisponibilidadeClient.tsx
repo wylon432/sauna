@@ -1,7 +1,8 @@
 'use client';
 
 import { useState, useMemo } from 'react';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Check, X as XIcon } from 'lucide-react';
+import Link from 'next/link';
 
 interface CalendarBlockData {
   id: string;
@@ -24,152 +25,187 @@ interface Props {
   rentalReservations: RentalReservationData[];
 }
 
-const MONTHS = [
+const MONTHS_PT = [
   'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
   'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro',
 ];
 
-function getDayStatus(
+const WEEKDAYS = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
+
+function getStatus(
   date: Date,
   blocks: CalendarBlockData[],
   reservations: RentalReservationData[]
-): 'available' | 'pre_reserved' | 'confirmed' | 'blocked' | null {
+): { type: 'available' | 'pre_reserved' | 'confirmed' | 'blocked'; label: string } {
   const dateStr = date.toISOString().split('T')[0];
 
-  const block = blocks.find((b) => {
-    const blockDate = new Date(b.date).toISOString().split('T')[0];
-    return blockDate === dateStr;
-  });
+  const block = blocks.find((b) => new Date(b.date).toISOString().split('T')[0] === dateStr);
+  if (block && block.blocked) return { type: 'blocked', label: block.reason || 'Bloqueada' };
 
-  if (block && block.blocked) return 'blocked';
-
-  const reservation = reservations.find((r) => {
-    const resDate = new Date(r.date).toISOString().split('T')[0];
-    return resDate === dateStr;
-  });
-
+  const reservation = reservations.find((r) => new Date(r.date).toISOString().split('T')[0] === dateStr);
   if (reservation) {
     if (['REQUESTED', 'PRE_RESERVED', 'AWAITING_SIGNAL'].includes(reservation.status)) {
-      return 'pre_reserved';
+      return { type: 'pre_reserved', label: `Pré-reserva${reservation.packageName ? ': ' + reservation.packageName : ''}` };
     }
-    return 'confirmed';
+    return { type: 'confirmed', label: `Confirmada${reservation.packageName ? ': ' + reservation.packageName : ''}` };
   }
 
-  return null;
-}
-
-function getStatusStyle(status: string | null): string {
-  switch (status) {
-    case 'blocked':
-      return 'bg-gray-200 text-gray-500 font-semibold';
-    case 'pre_reserved':
-      return 'bg-amber-100 text-amber-700 font-semibold ring-1 ring-amber-200';
-    case 'confirmed':
-      return 'bg-red-100 text-red-700 font-semibold ring-1 ring-red-200';
-    default:
-      return 'bg-green-50 text-green-700 hover:bg-green-100 hover:ring-1 hover:ring-green-200 cursor-pointer';
-  }
+  return { type: 'available', label: 'Disponível' };
 }
 
 export default function DisponibilidadeClient({ calendarBlocks, rentalReservations }: Props) {
-  const [currentMonth, setCurrentMonth] = useState(() => new Date().getMonth());
-  const [currentYear, setCurrentYear] = useState(() => new Date().getFullYear());
+  const [month, setMonth] = useState(() => new Date().getMonth());
+  const [year, setYear] = useState(() => new Date().getFullYear());
+  const [selectedDate, setSelectedDate] = useState<Date | null>(null);
 
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
-  const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
-  const firstDayOfWeek = new Date(currentYear, currentMonth, 1).getDay();
+  const calendar = useMemo(() => {
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+    const firstDay = new Date(year, month, 1).getDay();
+    const cells: (number | null)[] = [];
+    for (let i = 0; i < firstDay; i++) cells.push(null);
+    for (let d = 1; d <= daysInMonth; d++) cells.push(d);
+    return cells;
+  }, [month, year]);
 
-  const days = useMemo(() => {
-    const result: (number | null)[] = [];
-    for (let i = 0; i < firstDayOfWeek; i++) result.push(null);
-    for (let d = 1; d <= daysInMonth; d++) result.push(d);
-    return result;
-  }, [firstDayOfWeek, daysInMonth]);
+  const prev = () => {
+    if (month === 0) { setMonth(11); setYear(year - 1); }
+    else setMonth(month - 1);
+  };
 
-  const prevMonth = () => {
-    if (currentMonth === 0) {
-      setCurrentMonth(11);
-      setCurrentYear(currentYear - 1);
-    } else {
-      setCurrentMonth(currentMonth - 1);
+  const next = () => {
+    if (month === 11) { setMonth(0); setYear(year + 1); }
+    else setMonth(month + 1);
+  };
+
+  const getStyles = (status: string) => {
+    switch (status) {
+      case 'blocked': return 'bg-dark-200 text-dark-500 cursor-not-allowed';
+      case 'pre_reserved': return 'bg-amber-100 text-amber-700 ring-1 ring-amber-200';
+      case 'confirmed': return 'bg-red-100 text-red-600 ring-1 ring-red-200';
+      default: return 'bg-green-50 text-green-700 hover:bg-green-100 hover:ring-1 hover:ring-green-300 cursor-pointer';
     }
   };
 
-  const nextMonth = () => {
-    if (currentMonth === 11) {
-      setCurrentMonth(0);
-      setCurrentYear(currentYear + 1);
-    } else {
-      setCurrentMonth(currentMonth + 1);
-    }
-  };
+  const selected = selectedDate
+    ? getStatus(selectedDate, calendarBlocks, rentalReservations)
+    : null;
 
   return (
     <div>
-      {/* Month Navigation */}
-      <div className="mb-6 flex items-center justify-between">
-        <button
-          onClick={prevMonth}
-          className="flex h-10 w-10 items-center justify-center rounded-xl bg-gray-100 text-gray-600 transition-colors hover:bg-gray-200"
-        >
-          <ChevronLeft className="h-5 w-5" />
-        </button>
-        <h3 className="text-lg font-bold text-gray-900">
-          {MONTHS[currentMonth]} {currentYear}
-        </h3>
-        <button
-          onClick={nextMonth}
-          className="flex h-10 w-10 items-center justify-center rounded-xl bg-gray-100 text-gray-600 transition-colors hover:bg-gray-200"
-        >
-          <ChevronRight className="h-5 w-5" />
-        </button>
-      </div>
-
-      {/* Weekday Headers */}
-      <div className="mb-2 grid grid-cols-7 gap-1.5 text-center">
-        {['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'].map((day) => (
-          <div key={day} className="py-2 text-xs font-bold uppercase tracking-wider text-gray-400">
-            {day}
+      <div className="flex flex-col gap-8 lg:flex-row">
+        {/* Calendar Grid */}
+        <div className="flex-1">
+          <div className="mb-4 flex items-center justify-between">
+            <button onClick={prev} className="flex h-10 w-10 items-center justify-center rounded-xl bg-dark-100 text-dark-600 transition-colors hover:bg-dark-200">
+              <ChevronLeft className="h-5 w-5" />
+            </button>
+            <h3 className="text-lg font-extrabold text-dark-900">
+              {MONTHS_PT[month]} {year}
+            </h3>
+            <button onClick={next} className="flex h-10 w-10 items-center justify-center rounded-xl bg-dark-100 text-dark-600 transition-colors hover:bg-dark-200">
+              <ChevronRight className="h-5 w-5" />
+            </button>
           </div>
-        ))}
-      </div>
 
-      {/* Days Grid */}
-      <div className="grid grid-cols-7 gap-1.5">
-        {days.map((day, index) => {
-          if (day === null) {
-            return <div key={`empty-${index}`} className="aspect-square" />;
-          }
+          <div className="grid grid-cols-7 gap-1">
+            {WEEKDAYS.map((d) => (
+              <div key={d} className="py-2 text-center text-xs font-bold uppercase text-dark-400">{d}</div>
+            ))}
+            {calendar.map((day, i) => {
+              if (day === null) return <div key={`e${i}`} />;
+              const date = new Date(year, month, day);
+              const status = getStatus(date, calendarBlocks, rentalReservations);
+              const isPast = date < today;
+              const isToday = date.getTime() === today.getTime();
+              const isSelected = selectedDate?.getTime() === date.getTime();
 
-          const date = new Date(currentYear, currentMonth, day);
-          const status = getDayStatus(date, calendarBlocks, rentalReservations);
-          const isPast = date < today;
-          const isToday = date.getTime() === today.getTime();
+              return (
+                <button
+                  key={day}
+                  disabled={isPast}
+                  onClick={() => setSelectedDate(date)}
+                  className={`aspect-square flex flex-col items-center justify-center rounded-xl text-sm font-semibold transition-all duration-150
+                    ${isPast ? 'text-dark-300 cursor-not-allowed' : getStyles(status.type)}
+                    ${isToday ? 'ring-2 ring-brand-500 ring-offset-2' : ''}
+                    ${isSelected && !isPast ? 'ring-2 ring-brand-600 scale-105' : ''}
+                  `}
+                  title={status.label}
+                >
+                  <span>{day}</span>
+                  {!isPast && status.type !== 'available' && (
+                    <span className="mt-0.5 h-1.5 w-1.5 rounded-full bg-current" />
+                  )}
+                </button>
+              );
+            })}
+          </div>
+        </div>
 
-          return (
-            <div
-              key={day}
-              className={`aspect-square flex items-center justify-center rounded-xl text-sm transition-all duration-200 ${
-                isPast
-                  ? 'text-gray-300'
-                  : getStatusStyle(status)
-              } ${isToday ? 'ring-2 ring-amber-400 ring-offset-1' : ''}`}
-              title={
-                status === 'blocked'
-                  ? 'Bloqueada'
-                  : status === 'pre_reserved'
-                  ? 'Pré-reserva'
-                  : status === 'confirmed'
-                  ? 'Confirmada'
-                  : 'Disponível'
-              }
-            >
-              {day}
+        {/* Selected Date Info */}
+        <div className="lg:w-72">
+          {selectedDate ? (
+            <div className="rounded-2xl border border-dark-200 bg-white p-6 shadow-premium">
+              <p className="text-sm font-bold text-dark-400 uppercase tracking-wider">
+                {selectedDate.toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' })}
+              </p>
+              <div className="mt-3 flex items-center gap-2">
+                {selected!.type === 'available' && <Check className="h-5 w-5 text-green-600" />}
+                {selected!.type !== 'available' && <XIcon className="h-5 w-5 text-red-500" />}
+                <span className={`font-extrabold text-lg ${
+                  selected!.type === 'available' ? 'text-green-700' :
+                  selected!.type === 'blocked' ? 'text-dark-500' :
+                  selected!.type === 'pre_reserved' ? 'text-amber-700' : 'text-red-600'
+                }`}>
+                  {selected!.type === 'available' ? 'Disponível' :
+                   selected!.type === 'blocked' ? 'Bloqueada' :
+                   selected!.type === 'pre_reserved' ? 'Pré-reserva' : 'Confirmada'}
+                </span>
+              </div>
+              {selected!.label && selected!.type !== 'available' && (
+                <p className="mt-2 text-sm text-dark-500">{selected!.label}</p>
+              )}
+              {selected!.type === 'available' && (
+                <div className="mt-4 space-y-2">
+                  <Link
+                    href="/aluguel"
+                    className="block w-full rounded-xl bg-brand-600 py-2.5 text-center text-sm font-semibold text-white transition-colors hover:bg-brand-700"
+                  >
+                    Reservar para este dia
+                  </Link>
+                  <p className="text-center text-xs text-dark-400">Ou entre em contato pelo WhatsApp</p>
+                </div>
+              )}
             </div>
-          );
-        })}
+          ) : (
+            <div className="rounded-2xl border border-dark-100 bg-dark-50 p-6 text-center">
+              <p className="text-sm text-dark-400">Clique em uma data para ver detalhes</p>
+            </div>
+          )}
+
+          {/* Legend */}
+          <div className="mt-4 space-y-2 rounded-2xl border border-dark-200 bg-white p-4 shadow-premium">
+            <p className="text-xs font-bold uppercase text-dark-400">Legenda</p>
+            <div className="flex items-center gap-2">
+              <span className="h-3 w-3 rounded-full bg-green-500" />
+              <span className="text-sm text-dark-600">Disponível</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="h-3 w-3 rounded-full bg-amber-400" />
+              <span className="text-sm text-dark-600">Pré-reserva</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="h-3 w-3 rounded-full bg-red-500" />
+              <span className="text-sm text-dark-600">Confirmada</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="h-3 w-3 rounded-full bg-dark-300" />
+              <span className="text-sm text-dark-600">Bloqueada</span>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );

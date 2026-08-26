@@ -22,21 +22,21 @@ export default async function AluguelPage() {
   return (
     <div className="min-h-screen">
       {/* Hero */}
-      <section className="relative overflow-hidden bg-dark-950 px-4 py-20 sm:py-28">
+      <section className="relative overflow-hidden bg-gradient-to-b from-white via-brand-50/30 to-white px-4 py-20 sm:py-28">
         <div className="absolute inset-0">
-          <div className="absolute left-[10%] top-[20%] h-[400px] w-[400px] rounded-full bg-brand-600/10 blur-[120px] animate-glow-pulse" />
-          <div className="absolute bottom-[10%] right-[10%] h-[300px] w-[300px] rounded-full bg-brand-500/8 blur-[100px] animate-glow-pulse [animation-delay:1.5s]" />
+          <div className="absolute left-[10%] top-[20%] h-[400px] w-[400px] rounded-full bg-brand-500/8 blur-[120px] animate-glow-pulse" />
+          <div className="absolute bottom-[10%] right-[10%] h-[300px] w-[300px] rounded-full bg-brand-400/6 blur-[100px] animate-glow-pulse [animation-delay:1.5s]" />
         </div>
         <div className="relative mx-auto max-w-4xl text-center">
-          <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-brand-500/20 bg-brand-500/10 px-4 py-2 text-sm font-semibold text-brand-400">
+          <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-brand-200 bg-brand-100/60 px-4 py-2 text-sm font-semibold text-brand-700">
             <Sparkles className="h-4 w-4" />
             Festas e Eventos
           </div>
-          <h1 className="text-4xl font-extrabold tracking-tight text-white sm:text-5xl lg:text-6xl">
+          <h1 className="text-4xl font-extrabold tracking-tight text-dark-900 sm:text-5xl lg:text-6xl">
             Aluguel do
-            <span className="block text-brand-400">Espaço</span>
+            <span className="block text-brand-600">Espaço</span>
           </h1>
-          <p className="mx-auto mt-6 max-w-2xl text-lg text-dark-400">
+          <p className="mx-auto mt-6 max-w-2xl text-lg text-dark-600">
             Realize sua festa ou evento em um espaço incrível com infraestrutura completa. Confira nossos pacotes!
           </p>
           {phone && (

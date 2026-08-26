@@ -18,23 +18,23 @@ export default async function AluguelRegrasPage() {
   return (
     <div className="min-h-screen">
       {/* Header */}
-      <section className="relative overflow-hidden bg-dark-950 px-4 py-16 sm:py-20">
+      <section className="relative overflow-hidden bg-gradient-to-b from-white via-brand-50/30 to-white px-4 py-16 sm:py-20">
         <div className="absolute inset-0">
-          <div className="absolute left-[10%] top-[20%] h-[400px] w-[400px] rounded-full bg-brand-600/10 blur-[120px] animate-glow-pulse" />
-          <div className="absolute bottom-[10%] right-[10%] h-[300px] w-[300px] rounded-full bg-brand-500/8 blur-[100px] animate-glow-pulse [animation-delay:1.5s]" />
+          <div className="absolute left-[10%] top-[20%] h-[400px] w-[400px] rounded-full bg-brand-500/8 blur-[120px] animate-glow-pulse" />
+          <div className="absolute bottom-[10%] right-[10%] h-[300px] w-[300px] rounded-full bg-brand-400/6 blur-[100px] animate-glow-pulse [animation-delay:1.5s]" />
         </div>
         <div className="relative mx-auto max-w-4xl">
-          <Link href="/aluguel" className="mb-6 inline-flex items-center gap-2 text-sm text-dark-400 transition-colors hover:text-brand-400">
+          <Link href="/aluguel" className="mb-6 inline-flex items-center gap-2 text-sm text-dark-500 transition-colors hover:text-brand-600">
             <ArrowLeft className="h-4 w-4" />
             Voltar para Aluguel
           </Link>
           <div className="flex items-center gap-4">
-            <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-brand-600/20 backdrop-blur-sm">
-              <Shield className="h-7 w-7 text-brand-400" />
+            <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-brand-100">
+              <Shield className="h-7 w-7 text-brand-600" />
             </div>
             <div>
-              <h1 className="text-3xl font-extrabold text-white sm:text-4xl">Regras do Aluguel</h1>
-              <p className="mt-1 text-dark-400">Leia atentamente antes de reservar</p>
+              <h1 className="text-3xl font-extrabold text-dark-900 sm:text-4xl">Regras do Aluguel</h1>
+              <p className="mt-1 text-dark-500">Leia atentamente antes de reservar</p>
             </div>
           </div>
         </div>

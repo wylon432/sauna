@@ -91,27 +91,27 @@ export default async function HomePage() {
       )}
 
       {featuredReviews.length > 0 && (
-        <section className="bg-dark-900 px-4 py-20">
+        <section className="bg-gradient-to-b from-brand-50/40 to-white px-4 py-20">
           <div className="mx-auto max-w-7xl">
-            <h2 className="mb-10 text-center text-2xl font-extrabold text-white">
+            <h2 className="mb-10 text-center text-2xl font-extrabold text-dark-900">
               O que dizem sobre nós
             </h2>
             <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
               {featuredReviews.map((review) => (
-                <div key={review.id} className="rounded-2xl border border-dark-800 bg-dark-800/50 p-6 backdrop-blur-sm">
+                <div key={review.id} className="rounded-2xl border border-dark-200 bg-white p-6 shadow-premium">
                   <div className="mb-3 flex gap-1">
                     {Array.from({ length: 5 }).map((_, i) => (
-                      <Star key={i} className={`h-4 w-4 ${i < review.rating ? 'fill-brand-400 text-brand-400' : 'text-dark-600'}`} />
+                      <Star key={i} className={`h-4 w-4 ${i < review.rating ? 'fill-brand-400 text-brand-400' : 'text-dark-300'}`} />
                     ))}
                   </div>
                   {review.comment && (
-                    <p className="mb-4 line-clamp-3 text-sm text-dark-300">&ldquo;{review.comment}&rdquo;</p>
+                    <p className="mb-4 line-clamp-3 text-sm text-dark-600">&ldquo;{review.comment}&rdquo;</p>
                   )}
                   <div className="flex items-center gap-3">
                     <div className="flex h-8 w-8 items-center justify-center rounded-full bg-brand-600 text-xs font-bold text-white">
                       {(review.user?.name || 'A')[0].toUpperCase()}
                     </div>
-                    <p className="text-sm font-medium text-dark-300">{review.user?.name || 'Anônimo'}</p>
+                    <p className="text-sm font-medium text-dark-600">{review.user?.name || 'Anônimo'}</p>
                   </div>
                 </div>
               ))}

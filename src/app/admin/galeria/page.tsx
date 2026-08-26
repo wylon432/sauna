@@ -103,17 +103,18 @@ export default function GaleriaPage() {
           onClick={() => { setEditing(null); setForm({ url: '', title: '', description: '', category: 'GERAL', isMain: false, published: true, sortOrder: 0 }); setShowForm(true); }}
           className="btn-primary"
         >
-          <ImagePlus className="mr-2 h-4 w-4" /> Nova Imagem
+          <ImagePlus className="mr-2 h-4 w-4" /> Nova Mídia
         </button>
       </div>
 
       {showForm && (
         <div className="admin-card space-y-4">
-          <h3 className="font-semibold">{editing ? 'Editar Imagem' : 'Nova Imagem'}</h3>
+          <h3 className="font-semibold">{editing ? 'Editar Mídia' : 'Nova Mídia'}</h3>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div className="sm:col-span-2">
-              <label className="label">URL da Imagem</label>
-              <input className="input" value={form.url} onChange={(e) => setForm({ ...form, url: e.target.value })} placeholder="https://..." />
+              <label className="label">URL da Imagem ou Vídeo</label>
+              <input className="input" value={form.url} onChange={(e) => setForm({ ...form, url: e.target.value })} placeholder="https://... (aceita JPG, PNG, MP4, WEBM)" />
+              <p className="mt-1 text-xs text-gray-500">Cole a URL de uma imagem (JPG, PNG, WebP) ou vídeo (MP4, WebM)</p>
             </div>
             <div>
               <label className="label">Título</label>
@@ -154,9 +155,14 @@ export default function GaleriaPage() {
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
         {images.map((img) => (
           <div key={img.id} className="admin-card overflow-hidden">
-            <div className="relative aspect-square">
-              <img src={img.url} alt={img.title || ''} className="h-full w-full object-cover" />
+            <div className="relative aspect-square bg-gray-100">
+              {/\.(mp4|webm|ogg|mov)(\?|$)/i.test(img.url) ? (
+                <video src={img.url} className="h-full w-full object-cover" muted preload="metadata" />
+              ) : (
+                <img src={img.url} alt={img.title || ''} className="h-full w-full object-cover" />
+              )}
               <div className="absolute right-2 top-2 flex gap-1">
+                {/\.(mp4|webm|ogg|mov)(\?|$)/i.test(img.url) && <span className="badge bg-purple-600 text-white">Vídeo</span>}
                 {img.isMain && <span className="badge bg-sauna-600 text-white">Principal</span>}
                 {!img.published && <span className="badge bg-gray-600 text-white">Rascunho</span>}
               </div>
@@ -177,7 +183,7 @@ export default function GaleriaPage() {
           </div>
         ))}
         {images.length === 0 && (
-          <div className="col-span-full admin-card text-center text-gray-500">Nenhuma imagem na galeria.</div>
+          <div className="col-span-full admin-card text-center text-gray-500">Nenhuma mídia na galeria.</div>
         )}
       </div>
     </div>

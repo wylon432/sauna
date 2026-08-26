@@ -16,6 +16,13 @@ function generateSlug(title: string): string {
 
 export async function GET(request: NextRequest) {
   try {
+    // Auto-delete news older than 30 days
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+    await prisma.news.deleteMany({
+      where: { createdAt: { lt: thirtyDaysAgo } },
+    });
+
     const { searchParams } = new URL(request.url);
     const showAll = searchParams.get('all') === 'true';
 

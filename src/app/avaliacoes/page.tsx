@@ -4,6 +4,7 @@ import prisma from '@/lib/prisma';
 import { formatDate } from '@/lib/utils';
 import AvaliacoesForm from './AvaliacoesForm';
 import { Star, MessageSquare, Sparkles } from 'lucide-react';
+import Link from 'next/link';
 
 export const dynamic = 'force-dynamic';
 
@@ -53,29 +54,30 @@ export default async function AvaliacoesPage() {
   return (
     <div className="min-h-screen">
       {/* Hero Banner */}
-      <section className="relative overflow-hidden bg-gradient-to-br from-amber-900 via-amber-800 to-slate-900 px-4 py-20 sm:py-28">
-        <div className="absolute inset-0 bg-[url('/img/pattern.svg')] opacity-5" />
-        <div className="absolute -right-20 -top-20 h-64 w-64 rounded-full bg-amber-500/10 blur-3xl" />
-        <div className="absolute -bottom-20 -left-20 h-64 w-64 rounded-full bg-amber-600/10 blur-3xl" />
+      <section className="relative overflow-hidden bg-gradient-to-b from-white via-brand-50/30 to-white px-4 py-20 sm:py-28">
+        <div className="absolute inset-0">
+          <div className="absolute left-[10%] top-[20%] h-[400px] w-[400px] rounded-full bg-brand-500/8 blur-[120px] animate-glow-pulse" />
+          <div className="absolute bottom-[10%] right-[10%] h-[300px] w-[300px] rounded-full bg-brand-400/6 blur-[100px] animate-glow-pulse [animation-delay:1.5s]" />
+        </div>
         <div className="relative mx-auto max-w-7xl text-center">
-          <div className="mb-6 inline-flex items-center gap-2 rounded-full bg-amber-500/15 px-4 py-2 text-sm font-medium text-amber-300 backdrop-blur-sm">
+          <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-brand-200 bg-brand-100/60 px-4 py-2 text-sm font-semibold text-brand-700">
             <Sparkles className="h-4 w-4" />
             Opiniões dos Clientes
           </div>
-          <h1 className="text-4xl font-bold tracking-tight text-white sm:text-5xl lg:text-6xl">
+          <h1 className="text-4xl font-extrabold tracking-tight text-dark-900 sm:text-5xl lg:text-6xl">
             Avaliações
           </h1>
-          <p className="mx-auto mt-6 max-w-2xl text-lg text-amber-100/80">
+          <p className="mx-auto mt-6 max-w-2xl text-lg text-dark-600">
             Veja o que nossos clientes dizem sobre a experiência no nosso espaço.
           </p>
           {reviews.length > 0 && (
-            <div className="mt-8 inline-flex items-center gap-4 rounded-2xl bg-white/10 px-8 py-4 backdrop-blur-sm">
+            <div className="mt-8 inline-flex items-center gap-4 rounded-2xl border border-dark-200 bg-white px-8 py-4 shadow-premium">
               <div className="text-right">
-                <p className="text-3xl font-bold text-white">{totalRating.toFixed(1)}</p>
+                <p className="text-3xl font-bold text-dark-900">{totalRating.toFixed(1)}</p>
                 <StarDisplay rating={Math.round(totalRating)} size="sm" />
               </div>
-              <div className="h-10 w-px bg-white/20" />
-              <p className="text-sm text-amber-200/70">
+              <div className="h-10 w-px bg-dark-200" />
+              <p className="text-sm text-dark-500">
                 {reviews.length} {reviews.length === 1 ? 'avaliação' : 'avaliações'}
               </p>
             </div>
@@ -103,14 +105,22 @@ export default async function AvaliacoesPage() {
                 </div>
               </div>
             ) : (
-              <div className="overflow-hidden rounded-2xl border border-gray-100 bg-white p-8 shadow-sm text-center">
-                <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-amber-100">
-                  <MessageSquare className="h-8 w-8 text-amber-600" />
+              <div className="overflow-hidden rounded-2xl border border-dark-200 bg-white p-8 shadow-premium text-center">
+                <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-brand-100">
+                  <MessageSquare className="h-8 w-8 text-brand-600" />
                 </div>
-                <h3 className="text-lg font-bold text-gray-900">Faça login</h3>
-                <p className="mt-2 text-sm text-gray-500">
-                  Faça login para deixar sua avaliação.
+                <h3 className="text-lg font-extrabold text-dark-900">Faça login</h3>
+                <p className="mt-2 text-sm text-dark-500">
+                  Você precisa estar logado para deixar sua avaliação.
                 </p>
+                <div className="mt-4 flex gap-3 justify-center">
+                  <Link href="/login" className="inline-flex items-center rounded-xl bg-brand-600 px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-brand-700">
+                    Entrar
+                  </Link>
+                  <Link href="/cadastro" className="inline-flex items-center rounded-xl border border-dark-200 bg-white px-5 py-2.5 text-sm font-semibold text-dark-700 transition-colors hover:bg-dark-50">
+                    Criar conta
+                  </Link>
+                </div>
               </div>
             )}
           </div>

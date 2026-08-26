@@ -28,21 +28,22 @@ export default async function GaleriaPage() {
   return (
     <div className="min-h-screen">
       {/* Hero Banner */}
-      <section className="relative overflow-hidden bg-gradient-to-br from-sky-900 via-sky-800 to-slate-900 px-4 py-20 sm:py-28">
-        <div className="absolute inset-0 bg-[url('/img/pattern.svg')] opacity-5" />
-        <div className="absolute -right-20 -top-20 h-64 w-64 rounded-full bg-sky-500/10 blur-3xl" />
-        <div className="absolute -bottom-20 -left-20 h-64 w-64 rounded-full bg-sky-600/10 blur-3xl" />
+      <section className="relative overflow-hidden bg-gradient-to-b from-white via-brand-50/30 to-white px-4 py-20 sm:py-28">
+        <div className="absolute inset-0">
+          <div className="absolute left-[10%] top-[20%] h-[400px] w-[400px] rounded-full bg-brand-500/8 blur-[120px] animate-glow-pulse" />
+          <div className="absolute bottom-[10%] right-[10%] h-[300px] w-[300px] rounded-full bg-brand-400/6 blur-[100px] animate-glow-pulse [animation-delay:1.5s]" />
+        </div>
         <div className="relative mx-auto max-w-7xl text-center">
-          <div className="mb-6 inline-flex items-center gap-2 rounded-full bg-sky-500/15 px-4 py-2 text-sm font-medium text-sky-300 backdrop-blur-sm">
+          <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-brand-200 bg-brand-100/60 px-4 py-2 text-sm font-semibold text-brand-700">
             <Sparkles className="h-4 w-4" />
             Galeria
           </div>
-          <h1 className="text-4xl font-bold tracking-tight text-white sm:text-5xl lg:text-6xl">
+          <h1 className="text-4xl font-extrabold tracking-tight text-dark-900 sm:text-5xl lg:text-6xl">
             Conheça nosso
-            <span className="block text-sky-400">espaço</span>
+            <span className="block text-brand-600">espaço</span>
           </h1>
-          <p className="mx-auto mt-6 max-w-2xl text-lg text-sky-100/80">
-            Veja as fotos do nosso espaço e descubra o que temos a oferecer.
+          <p className="mx-auto mt-6 max-w-2xl text-lg text-dark-600">
+            Veja as fotos e vídeos do nosso espaço e descubra o que temos a oferecer.
           </p>
         </div>
       </section>

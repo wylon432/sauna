@@ -28,21 +28,21 @@ export default async function SaunaPage() {
   return (
     <div className="min-h-screen">
       {/* Hero */}
-      <section className="relative overflow-hidden bg-dark-950 px-4 py-20 sm:py-28">
+      <section className="relative overflow-hidden bg-gradient-to-b from-white via-brand-50/30 to-white px-4 py-20 sm:py-28">
         <div className="absolute inset-0">
-          <div className="absolute left-[10%] top-[20%] h-[400px] w-[400px] rounded-full bg-brand-600/10 blur-[120px] animate-glow-pulse" />
-          <div className="absolute bottom-[10%] right-[10%] h-[300px] w-[300px] rounded-full bg-brand-500/8 blur-[100px] animate-glow-pulse [animation-delay:1.5s]" />
+          <div className="absolute left-[10%] top-[20%] h-[400px] w-[400px] rounded-full bg-brand-500/8 blur-[120px] animate-glow-pulse" />
+          <div className="absolute bottom-[10%] right-[10%] h-[300px] w-[300px] rounded-full bg-brand-400/6 blur-[100px] animate-glow-pulse [animation-delay:1.5s]" />
         </div>
         <div className="relative mx-auto max-w-4xl text-center">
-          <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-brand-500/20 bg-brand-500/10 px-4 py-2 text-sm font-semibold text-brand-400">
+          <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-brand-200 bg-brand-100/60 px-4 py-2 text-sm font-semibold text-brand-700">
             <Sparkles className="h-4 w-4" />
             Relaxamento e Bem-estar
           </div>
-          <h1 className="text-4xl font-extrabold tracking-tight text-white sm:text-5xl lg:text-6xl">
+          <h1 className="text-4xl font-extrabold tracking-tight text-dark-900 sm:text-5xl lg:text-6xl">
             Sauna e Espaço
-            <span className="block text-brand-400">da Janice</span>
+            <span className="block text-brand-600">da Janice</span>
           </h1>
-          <p className="mx-auto mt-6 max-w-2xl text-lg text-dark-400">
+          <p className="mx-auto mt-6 max-w-2xl text-lg text-dark-600">
             Venha relaxar em nosso ambiente acolhedor e exclusivo. Aqui você encontra o equilíbrio perfeito entre descanso e bem-estar, com horários exclusivos para masculino e feminino.
           </p>
           {phone && (
@@ -85,44 +85,44 @@ export default async function SaunaPage() {
       </section>
 
       {/* Horários */}
-      <section className="bg-dark-950 px-4 py-20">
+      <section className="bg-gradient-to-b from-brand-50/40 to-white px-4 py-20">
         <div className="mx-auto max-w-4xl">
           <div className="mb-12 text-center">
-            <span className="text-sm font-bold uppercase tracking-widest text-brand-400">Horários</span>
-            <h2 className="mt-2 text-3xl font-extrabold text-white">Dias e Horários de Funcionamento</h2>
-            <p className="mt-3 text-dark-400">Confira os horários disponíveis para cada dia da semana</p>
+            <span className="text-sm font-bold uppercase tracking-widest text-brand-600">Horários</span>
+            <h2 className="mt-2 text-3xl font-extrabold text-dark-900">Dias e Horários de Funcionamento</h2>
+            <p className="mt-3 text-dark-500">Confira os horários disponíveis para cada dia da semana</p>
           </div>
 
           {schedules.length === 0 ? (
-            <div className="rounded-2xl border border-dark-800 bg-dark-900/50 p-12 text-center">
-              <Clock className="mx-auto mb-4 h-10 w-10 text-dark-600" />
-              <h3 className="text-lg font-bold text-white">Horários em breve</h3>
-              <p className="mt-2 text-dark-400">Consulte pelo WhatsApp para mais informações.</p>
+            <div className="rounded-2xl border border-dark-200 bg-white p-12 text-center shadow-premium">
+              <Clock className="mx-auto mb-4 h-10 w-10 text-dark-400" />
+              <h3 className="text-lg font-bold text-dark-900">Horários em breve</h3>
+              <p className="mt-2 text-dark-500">Consulte pelo WhatsApp para mais informações.</p>
             </div>
           ) : (
             <div className="space-y-6">
               {Object.entries(grouped)
                 .sort(([a], [b]) => Number(a) - Number(b))
                 .map(([day, daySchedules]) => (
-                  <div key={day} className="overflow-hidden rounded-2xl border border-dark-800 bg-dark-900/50">
-                    <div className="border-b border-dark-800 bg-brand-600/10 px-6 py-4">
-                      <h3 className="text-lg font-extrabold text-white">{DAYS_OF_WEEK[Number(day)] || `Dia ${day}`}</h3>
+                  <div key={day} className="overflow-hidden rounded-2xl border border-dark-200 bg-white shadow-premium">
+                    <div className="border-b border-dark-100 bg-brand-50 px-6 py-4">
+                      <h3 className="text-lg font-extrabold text-dark-900">{DAYS_OF_WEEK[Number(day)] || `Dia ${day}`}</h3>
                     </div>
                     <div className="p-6">
                       {daySchedules.map((s) => (
                         <div key={s.id} className="flex items-center gap-4 py-3">
-                          <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full ${s.gender === 'FEMININO' ? 'bg-pink-500/20 text-pink-400' : 'bg-blue-500/20 text-blue-400'}`}>
+                          <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full ${s.gender === 'FEMININO' ? 'bg-pink-100 text-pink-600' : 'bg-blue-100 text-blue-600'}`}>
                             <Users className="h-5 w-5" />
                           </div>
                           <div className="flex-1">
-                            <span className={`inline-flex rounded-full px-3 py-1 text-xs font-bold ${s.gender === 'FEMININO' ? 'bg-pink-500/20 text-pink-400' : 'bg-blue-500/20 text-blue-400'}`}>
+                            <span className={`inline-flex rounded-full px-3 py-1 text-xs font-bold ${s.gender === 'FEMININO' ? 'bg-pink-100 text-pink-700' : 'bg-blue-100 text-blue-700'}`}>
                               {GENDERS[s.gender] || s.gender}
                             </span>
                           </div>
                           <div className="text-right">
-                            <span className="text-lg font-bold text-white">{s.startTime}</span>
-                            <span className="mx-2 text-dark-500">até</span>
-                            <span className="text-lg font-bold text-white">{s.endTime}</span>
+                            <span className="text-lg font-bold text-dark-900">{s.startTime}</span>
+                            <span className="mx-2 text-dark-400">até</span>
+                            <span className="text-lg font-bold text-dark-900">{s.endTime}</span>
                           </div>
                         </div>
                       ))}
@@ -154,7 +154,7 @@ export default async function SaunaPage() {
                 O <strong>Sauna e Espaço da Janice</strong> não oferece serviço de alimentação. Ou seja, não servimos porções, refeições ou lanches. No entanto, entendemos que a comida faz parte da experiência de lazer, por isso oferecemos alternativas práticas para que você possa levar e preparar o que preferir.
               </p>
               <p className="leading-relaxed">
-                Você poderá <strong>trazer sua própria comida</strong> para consumir no local. Seja um lanche, uma refeição leve ou bebidas alternativas, fique à vontade para trazer o que desejar. A única exigência é que o espaço seja mantido limpo e conservado após o uso.
+                Você poderá <strong>trazer sua própria comida</strong> para consumir no local. Seja um lanche ou uma refeição leve, fique à vontade para trazer o que desejar. A única exigência é que o espaço seja mantido limpo e conservado após o uso.
               </p>
               <p className="leading-relaxed">
                 Para sua comodidade, o espaço conta com uma <strong>Air Fry</strong> disponível para uso dos clientes. Com ela, você pode preparar alimentos de forma rápida e prática, sem necessidade de levar panelas ou utensílios extras. Também há um <strong>fogão disponível</strong> para quem desejar preparar algo mais elaborado.
@@ -183,6 +183,9 @@ export default async function SaunaPage() {
               </p>
               <p className="leading-relaxed">
                 Os métodos de pagamento aceitos para as bebidas são <strong>Pix</strong> e <strong>dinheiro</strong>. Não há cobrança automática ou integração com máquinas de cartão para esse serviço. O valor total das bebidas consumidas será informado no momento do pagamento, e você poderá conferir todos os itens registrados.
+              </p>
+              <p className="leading-relaxed">
+                <strong>É terminantemente proibido trazer bebidas de fora do estabelecimento.</strong> Todo o consumo de bebidas deve ser realizado exclusivamente com os produtos disponíveis na geladeira do espaço. O descumprimento desta regra resultará em multa e possível suspensão do acesso ao local.
               </p>
               <p className="leading-relaxed">
                 Pedimos que as bebidas sejam consumidas com <strong>moderação e responsabilidade</strong>. O estabelecimento se reserva o direito de suspender o fornecimento de bebidas em caso de consumo excessivo ou comportamento inadequado.
