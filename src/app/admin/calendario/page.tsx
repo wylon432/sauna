@@ -17,7 +17,6 @@ interface DayInfo {
   date: string;
   reservations: { id: string; status: string; user: { name: string }; package?: { name: string } }[];
   block?: { id: string; blocked: boolean; reason?: string };
-  saunaReservations?: { id: string; status: string; user: { name: string }; schedule?: { gender: string; startTime: string; endTime: string } }[];
 }
 
 export default function CalendarioPage() {
@@ -75,7 +74,6 @@ export default function CalendarioPage() {
     if (dayData.block?.blocked) return 'bg-dark-300 text-dark-700';
     if (dayData.reservations.some((r) => r.status === 'CONFIRMED')) return 'bg-red-200 text-red-900';
     if (dayData.reservations.some((r) => r.status === 'PRE_RESERVED' || r.status === 'REQUESTED')) return 'bg-amber-200 text-amber-900';
-    if (dayData.saunaReservations && dayData.saunaReservations.length > 0) return 'bg-blue-100 text-blue-800';
     return 'bg-green-100 text-green-800';
   };
 
@@ -108,7 +106,6 @@ export default function CalendarioPage() {
           <span className="flex items-center gap-1"><span className="h-3 w-3 rounded bg-green-100 border border-green-300"></span> Disponível</span>
           <span className="flex items-center gap-1"><span className="h-3 w-3 rounded bg-amber-200 border border-amber-300"></span> Pré-reserva</span>
           <span className="flex items-center gap-1"><span className="h-3 w-3 rounded bg-red-200 border border-red-300"></span> Confirmada</span>
-          <span className="flex items-center gap-1"><span className="h-3 w-3 rounded bg-blue-100 border border-blue-300"></span> Sauna</span>
           <span className="flex items-center gap-1"><span className="h-3 w-3 rounded bg-dark-300 border border-dark-400"></span> Bloqueada</span>
         </div>
 
@@ -171,7 +168,7 @@ export default function CalendarioPage() {
                 <div key={r.id} className="flex items-center justify-between rounded-lg border border-dark-100 p-3">
                   <div>
                     <p className="text-sm font-medium">{r.user?.name}</p>
-                    <p className="text-xs text-dark-500">{r.package?.name || 'Sauna'}</p>
+                    <p className="text-xs text-dark-500">{r.package?.name || 'Aluguel'}</p>
                   </div>
                   <span className={`badge ${RESERVATION_STATUS[r.status]?.color || 'bg-dark-100'}`}>
                     {RESERVATION_STATUS[r.status]?.label || r.status}
@@ -181,26 +178,6 @@ export default function CalendarioPage() {
             </div>
           ) : (
             <p className="text-sm text-dark-500">Nenhum aluguel nesta data.</p>
-          )}
-
-          {selectedData?.saunaReservations && selectedData.saunaReservations.length > 0 && (
-            <div className="space-y-2">
-              <p className="text-xs font-bold uppercase text-dark-400">Sauna</p>
-              {selectedData.saunaReservations.map((r) => (
-                <div key={r.id} className="flex items-center justify-between rounded-lg border border-dark-100 p-3">
-                  <div>
-                    <p className="text-sm font-medium">{r.user?.name}</p>
-                    <p className="text-xs text-dark-500">
-                      {r.schedule?.gender === 'FEMININO' ? 'Feminino' : 'Masculino'}
-                      {r.schedule?.startTime ? ` • ${r.schedule.startTime}-${r.schedule.endTime}` : ''}
-                    </p>
-                  </div>
-                  <span className={`badge ${RESERVATION_STATUS[r.status]?.color || 'bg-dark-100'}`}>
-                    {RESERVATION_STATUS[r.status]?.label || r.status}
-                  </span>
-                </div>
-              ))}
-            </div>
           )}
 
           {selectedData?.block?.blocked && (

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useMemo } from 'react';
-import { ChevronLeft, ChevronRight, Check, X as XIcon, Clock } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Check, X as XIcon } from 'lucide-react';
 import Link from 'next/link';
 
 interface CalendarBlockData {
@@ -18,23 +18,11 @@ interface RentalReservationData {
   endDate: string | null;
   status: string;
   packageName: string;
-  type: 'RENTAL';
-}
-
-interface SaunaReservationData {
-  id: string;
-  date: string;
-  status: string;
-  gender: string;
-  startTime: string;
-  endTime: string;
-  type: 'SAUNA';
 }
 
 interface Props {
   calendarBlocks: CalendarBlockData[];
   rentalReservations: RentalReservationData[];
-  saunaReservations: SaunaReservationData[];
 }
 
 const MONTHS_PT = [
@@ -45,16 +33,14 @@ const MONTHS_PT = [
 const WEEKDAYS = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
 
 type DayStatus = {
-  type: 'available' | 'pre_reserved' | 'confirmed' | 'blocked' | 'sauna_booked';
+  type: 'available' | 'pre_reserved' | 'confirmed' | 'blocked';
   label: string;
-  detail?: string;
 };
 
 function getStatus(
   date: Date,
   blocks: CalendarBlockData[],
   reservations: RentalReservationData[],
-  saunaRes: SaunaReservationData[],
 ): DayStatus {
   const dateStr = date.toISOString().split('T')[0];
 
@@ -66,23 +52,13 @@ function getStatus(
     if (['REQUESTED', 'PRE_RESERVED', 'AWAITING_SIGNAL'].includes(reservation.status)) {
       return { type: 'pre_reserved', label: `Pré-reserva${reservation.packageName ? ': ' + reservation.packageName : ''}` };
     }
-    return { type: 'confirmed', label: `Aluguel confirmado${reservation.packageName ? ': ' + reservation.packageName : ''}` };
-  }
-
-  const sauna = saunaRes.find((s) => new Date(s.date).toISOString().split('T')[0] === dateStr);
-  if (sauna) {
-    const genderLabel = sauna.gender === 'FEMININO' ? 'Feminino' : 'Masculino';
-    return {
-      type: 'sauna_booked',
-      label: `Sauna reservada`,
-      detail: `${genderLabel} • ${sauna.startTime}-${sauna.endTime}`,
-    };
+    return { type: 'confirmed', label: `Confirmada${reservation.packageName ? ': ' + reservation.packageName : ''}` };
   }
 
   return { type: 'available', label: 'Disponível' };
 }
 
-export default function DisponibilidadeClient({ calendarBlocks, rentalReservations, saunaReservations }: Props) {
+export default function DisponibilidadeClient({ calendarBlocks, rentalReservations }: Props) {
   const [month, setMonth] = useState(() => new Date().getMonth());
   const [year, setYear] = useState(() => new Date().getFullYear());
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
@@ -114,13 +90,12 @@ export default function DisponibilidadeClient({ calendarBlocks, rentalReservatio
       case 'blocked': return 'bg-dark-200 text-dark-500 cursor-not-allowed';
       case 'pre_reserved': return 'bg-amber-100 text-amber-700 ring-1 ring-amber-200';
       case 'confirmed': return 'bg-red-100 text-red-600 ring-1 ring-red-200';
-      case 'sauna_booked': return 'bg-blue-100 text-blue-600 ring-1 ring-blue-200';
       default: return 'bg-green-50 text-green-700 hover:bg-green-100 hover:ring-1 hover:ring-green-300 cursor-pointer';
     }
   };
 
   const selected = selectedDate
-    ? getStatus(selectedDate, calendarBlocks, rentalReservations, saunaReservations)
+    ? getStatus(selectedDate, calendarBlocks, rentalReservations)
     : null;
 
   return (
@@ -147,7 +122,7 @@ export default function DisponibilidadeClient({ calendarBlocks, rentalReservatio
             {calendar.map((day, i) => {
               if (day === null) return <div key={`e${i}`} />;
               const date = new Date(year, month, day);
-              const status = getStatus(date, calendarBlocks, rentalReservations, saunaReservations);
+              const status = getStatus(date, calendarBlocks, rentalReservations);
               const isPast = date < today;
               const isToday = date.getTime() === today.getTime();
               const isSelected = selectedDate?.getTime() === date.getTime();
@@ -187,20 +162,15 @@ export default function DisponibilidadeClient({ calendarBlocks, rentalReservatio
                 <span className={`font-extrabold text-lg ${
                   selected!.type === 'available' ? 'text-green-700' :
                   selected!.type === 'blocked' ? 'text-dark-500' :
-                  selected!.type === 'pre_reserved' ? 'text-amber-700' :
-                  selected!.type === 'sauna_booked' ? 'text-blue-600' : 'text-red-600'
+                  selected!.type === 'pre_reserved' ? 'text-amber-700' : 'text-red-600'
                 }`}>
                   {selected!.type === 'available' ? 'Disponível' :
                    selected!.type === 'blocked' ? 'Bloqueada' :
-                   selected!.type === 'pre_reserved' ? 'Pré-reserva' :
-                   selected!.type === 'sauna_booked' ? 'Sauna reservada' : 'Confirmada'}
+                   selected!.type === 'pre_reserved' ? 'Pré-reserva' : 'Confirmada'}
                 </span>
               </div>
               {selected!.label && selected!.type !== 'available' && (
                 <p className="mt-2 text-sm text-dark-500">{selected!.label}</p>
-              )}
-              {selected!.detail && (
-                <p className="mt-1 text-xs text-dark-400">{selected!.detail}</p>
               )}
               {selected!.type === 'available' && (
                 <div className="mt-4 space-y-2">
@@ -211,15 +181,6 @@ export default function DisponibilidadeClient({ calendarBlocks, rentalReservatio
                     Reservar para este dia
                   </Link>
                   <p className="text-center text-xs text-dark-400">Ou entre em contato pelo WhatsApp</p>
-                </div>
-              )}
-              {selected!.type === 'sauna_booked' && (
-                <div className="mt-4 rounded-xl bg-blue-50 p-3">
-                  <div className="flex items-center gap-2">
-                    <Clock className="h-4 w-4 text-blue-600" />
-                    <p className="text-sm font-semibold text-blue-700">Sauna já reservada neste dia</p>
-                  </div>
-                  <p className="mt-1 text-xs text-blue-500">Consulte disponibilidade para aluguel do espaço</p>
                 </div>
               )}
             </div>
@@ -238,15 +199,11 @@ export default function DisponibilidadeClient({ calendarBlocks, rentalReservatio
             </div>
             <div className="flex items-center gap-2">
               <span className="h-3 w-3 rounded-full bg-amber-400" />
-              <span className="text-sm text-dark-600">Pré-reserva aluguel</span>
+              <span className="text-sm text-dark-600">Pré-reserva</span>
             </div>
             <div className="flex items-center gap-2">
               <span className="h-3 w-3 rounded-full bg-red-500" />
-              <span className="text-sm text-dark-600">Aluguel confirmado</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <span className="h-3 w-3 rounded-full bg-blue-400" />
-              <span className="text-sm text-dark-600">Sauna reservada</span>
+              <span className="text-sm text-dark-600">Confirmada</span>
             </div>
             <div className="flex items-center gap-2">
               <span className="h-3 w-3 rounded-full bg-dark-300" />

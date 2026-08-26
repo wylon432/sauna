@@ -12,17 +12,10 @@ export async function GET(req: Request) {
   const start = new Date(searchParams.get('start') || '');
   const end = new Date(searchParams.get('end') || '');
 
-  const [rentalReservations, saunaReservations, blocks] = await Promise.all([
+  const [rentalReservations, blocks] = await Promise.all([
     prisma.rentalReservation.findMany({
       where: { date: { gte: start, lte: end }, status: { not: 'CANCELLED' } },
       include: { user: { select: { name: true } }, package: { select: { name: true } } },
-    }),
-    prisma.saunaReservation.findMany({
-      where: { date: { gte: start, lte: end }, status: { not: 'CANCELLED' } },
-      include: {
-        user: { select: { name: true } },
-        schedule: { select: { gender: true, startTime: true, endTime: true } },
-      },
     }),
     prisma.calendarBlock.findMany({
       where: { date: { gte: start, lte: end } },
@@ -34,22 +27,12 @@ export async function GET(req: Request) {
 
   for (const r of rentalReservations) {
     const key = dateStr(new Date(r.date));
-    if (!data[key]) data[key] = { date: key, reservations: [], saunaReservations: [], block: null };
+    if (!data[key]) data[key] = { date: key, reservations: [], block: null };
     data[key].reservations.push({ id: r.id, status: r.status, user: r.user, package: r.package });
-  }
-  for (const r of saunaReservations) {
-    const key = dateStr(new Date(r.date));
-    if (!data[key]) data[key] = { date: key, reservations: [], saunaReservations: [], block: null };
-    data[key].saunaReservations.push({
-      id: r.id,
-      status: r.status,
-      user: r.user,
-      schedule: r.schedule,
-    });
   }
   for (const b of blocks) {
     const key = dateStr(new Date(b.date));
-    if (!data[key]) data[key] = { date: key, reservations: [], saunaReservations: [], block: null };
+    if (!data[key]) data[key] = { date: key, reservations: [], block: null };
     data[key].block = { id: b.id, blocked: b.blocked, reason: b.reason };
   }
 

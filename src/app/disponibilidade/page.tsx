@@ -1,4 +1,4 @@
-import { CalendarDays, Clock, Sparkles } from 'lucide-react';
+import { CalendarDays, Clock } from 'lucide-react';
 import prisma from '@/lib/prisma';
 import { GENDERS, DAYS_OF_WEEK } from '@/lib/utils';
 import DisponibilidadeClient from './DisponibilidadeClient';
@@ -11,7 +11,7 @@ export const metadata = {
 };
 
 export default async function DisponibilidadePage() {
-  const [schedules, calendarBlocks, rentalReservations, saunaReservations] = await Promise.all([
+  const [schedules, calendarBlocks, rentalReservations] = await Promise.all([
     prisma.saunaSchedule.findMany({
       where: { active: true },
       orderBy: [{ dayOfWeek: 'asc' }, { gender: 'asc' }],
@@ -27,16 +27,6 @@ export default async function DisponibilidadePage() {
       },
       orderBy: { date: 'asc' },
       include: { package: true },
-    }),
-    prisma.saunaReservation.findMany({
-      where: {
-        status: { notIn: ['CANCELLED'] },
-        date: { gte: new Date() },
-      },
-      orderBy: { date: 'asc' },
-      include: {
-        schedule: { select: { gender: true, startTime: true, endTime: true } },
-      },
     }),
   ]);
 
@@ -60,17 +50,6 @@ export default async function DisponibilidadePage() {
     endDate: r.endDate?.toISOString() || null,
     status: r.status,
     packageName: r.package?.name || '',
-    type: 'RENTAL' as const,
-  }));
-
-  const serializedSaunaReservations = saunaReservations.map((r) => ({
-    id: r.id,
-    date: r.date.toISOString(),
-    status: r.status,
-    gender: r.schedule?.gender || '',
-    startTime: r.schedule?.startTime || '',
-    endTime: r.schedule?.endTime || '',
-    type: 'SAUNA' as const,
   }));
 
   return (
@@ -156,32 +135,6 @@ export default async function DisponibilidadePage() {
               ))}
           </div>
         )}
-
-        {/* Sauna reservations for current month */}
-        {serializedSaunaReservations.length > 0 && (
-          <div className="mt-10">
-            <h3 className="mb-4 text-lg font-extrabold text-dark-900">Próximas reservas de sauna</h3>
-            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-              {serializedSaunaReservations.slice(0, 6).map((r) => (
-                <div key={r.id} className="flex items-center gap-3 rounded-xl border border-dark-100 bg-white p-4 shadow-sm">
-                  <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full ${
-                    r.gender === 'FEMININO' ? 'bg-pink-100 text-pink-600' : 'bg-blue-100 text-blue-600'
-                  }`}>
-                    <Clock className="h-5 w-5" />
-                  </div>
-                  <div>
-                    <p className="text-sm font-bold text-dark-900">
-                      {new Date(r.date).toLocaleDateString('pt-BR', { weekday: 'short', day: '2-digit', month: 'short' })}
-                    </p>
-                    <p className="text-xs text-dark-500">
-                      {r.gender === 'FEMININO' ? 'Feminino' : 'Masculino'} • {r.startTime} - {r.endTime}
-                    </p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
       </section>
 
       {/* Divider */}
@@ -208,7 +161,6 @@ export default async function DisponibilidadePage() {
             <DisponibilidadeClient
               calendarBlocks={serializedBlocks}
               rentalReservations={serializedReservations}
-              saunaReservations={serializedSaunaReservations}
             />
           </div>
         </div>

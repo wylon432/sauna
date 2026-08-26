@@ -21,7 +21,7 @@ interface GalleryImageData {
 }
 
 function isVideoUrl(url: string): boolean {
-  return /\.(mp4|webm|ogg|mov)(\?|$)/i.test(url);
+  return /\.(mp4|webm|ogg|mov)(\?|$)/i.test(url) || url.startsWith('data:video');
 }
 
 export default function GaleriaPage() {
@@ -227,10 +227,29 @@ export default function GaleriaPage() {
               {/* Preview */}
               {(preview || (uploadMode === 'url' && form.url)) && (
                 <div className="mt-4 relative inline-block">
-                  {(preview || form.url).match(/\.(mp4|webm|ogg|mov)(\?|$)/i) || (preview || form.url).startsWith('data:video') ? (
-                    <video src={preview || form.url} className="max-h-40 rounded-lg" muted preload="metadata" />
+                  {isVideoUrl(preview || form.url) ? (
+                    <video
+                      src={preview || form.url}
+                      className="max-h-40 rounded-lg"
+                      muted
+                      preload="metadata"
+                      onError={(e) => {
+                        (e.target as HTMLVideoElement).style.display = 'none';
+                        const err = document.createElement('p');
+                        err.className = 'text-xs text-red-500 mt-1';
+                        err.textContent = 'Vídeo não pôde ser carregado. Verifique a URL.';
+                        (e.target as HTMLVideoElement).parentElement?.appendChild(err);
+                      }}
+                    />
                   ) : (
-                    <img src={preview || form.url} alt="Preview" className="max-h-40 rounded-lg object-cover" />
+                    <img
+                      src={preview || form.url}
+                      alt="Preview"
+                      className="max-h-40 rounded-lg object-cover"
+                      onError={(e) => {
+                        (e.target as HTMLImageElement).src = 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="200" height="100" viewBox="0 0 200 100"><rect fill="%23f3f4f6" width="200" height="100"/><text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" fill="%239ca3af" font-size="12" font-family="sans-serif">Imagem não encontrada</text></svg>');
+                      }}
+                    />
                   )}
                   <button
                     onClick={() => { setForm({ ...form, url: '' }); setPreview(null); }}
@@ -284,13 +303,20 @@ export default function GaleriaPage() {
         {images.map((img) => (
           <div key={img.id} className="admin-card overflow-hidden">
             <div className="relative aspect-square bg-dark-100">
-              {isVideoUrl(img.url) || img.url.startsWith('data:video') ? (
+              {isVideoUrl(img.url) ? (
                 <video src={img.url} className="h-full w-full object-cover" muted preload="metadata" />
               ) : (
-                <img src={img.url} alt={img.title || ''} className="h-full w-full object-cover" />
+                <img
+                  src={img.url}
+                  alt={img.title || ''}
+                  className="h-full w-full object-cover"
+                  onError={(e) => {
+                    (e.target as HTMLImageElement).src = 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="200" height="200" viewBox="0 0 200 200"><rect fill="%23f3f4f6" width="200" height="200"/><text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" fill="%239ca3af" font-size="12" font-family="sans-serif">Imagem quebrada</text></svg>');
+                  }}
+                />
               )}
               <div className="absolute right-2 top-2 flex gap-1">
-                {(isVideoUrl(img.url) || img.url.startsWith('data:video')) && <span className="badge bg-purple-600 text-white">Vídeo</span>}
+                {isVideoUrl(img.url) && <span className="badge bg-purple-600 text-white">Vídeo</span>}
                 {img.isMain && <span className="badge bg-brand-600 text-white">Principal</span>}
                 {!img.published && <span className="badge bg-dark-600 text-white">Rascunho</span>}
               </div>

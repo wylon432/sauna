@@ -50,6 +50,9 @@ function MediaThumbnail({ image, className }: { image: SerializedImage; classNam
       alt={image.title || 'Galeria'}
       className={`h-full w-full object-cover ${className || ''}`}
       loading="lazy"
+      onError={(e) => {
+        (e.target as HTMLImageElement).src = 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="200" height="200" viewBox="0 0 200 200"><rect fill="%23f3f4f6" width="200" height="200"/><text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" fill="%239ca3af" font-size="12" font-family="sans-serif">Imagem não encontrada</text></svg>');
+      }}
     />
   );
 }
@@ -70,6 +73,9 @@ function MediaLightbox({ image }: { image: SerializedImage }) {
       src={image.url}
       alt={image.title || 'Galeria'}
       className="max-h-[80vh] w-auto rounded-2xl object-contain"
+      onError={(e) => {
+        (e.target as HTMLImageElement).src = 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="400" height="300" viewBox="0 0 400 300"><rect fill="%23f3f4f6" width="400" height="300"/><text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" fill="%239ca3af" font-size="14" font-family="sans-serif">Imagem não encontrada</text></svg>');
+      }}
     />
   );
 }
