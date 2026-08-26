@@ -6,12 +6,10 @@ function createPrismaClient() {
   const databaseUrl = process.env.DATABASE_URL || 'file:./prisma/dev.db';
 
   const { PrismaLibSql } = require('@prisma/adapter-libsql');
-  const { createClient } = require('@libsql/client');
-  const client = createClient({
+  const adapter = new PrismaLibSql({
     url: databaseUrl,
     authToken: process.env.TURSO_AUTH_TOKEN || undefined,
   });
-  const adapter = new PrismaLibSql(client);
   return new PrismaClient({ adapter });
 }
 
