@@ -12,42 +12,31 @@ interface HeroSectionProps {
 export default function HeroSection({ whatsappPhone }: HeroSectionProps) {
   return (
     <>
-      <section className="relative flex min-h-screen items-center justify-center overflow-hidden bg-dark-950">
-        {/* Animated orbs */}
+      <section className="relative flex min-h-[80vh] items-center justify-center overflow-hidden bg-gradient-to-b from-white via-brand-50/30 to-white">
         <div className="absolute inset-0">
-          <div className="absolute left-[10%] top-[20%] h-[500px] w-[500px] rounded-full bg-brand-600/10 blur-[120px] animate-glow-pulse" />
-          <div className="absolute bottom-[10%] right-[10%] h-[400px] w-[400px] rounded-full bg-brand-500/8 blur-[100px] animate-glow-pulse [animation-delay:1.5s]" />
-          <div className="absolute left-[50%] top-[60%] h-[300px] w-[300px] -translate-x-1/2 rounded-full bg-brand-400/5 blur-[80px] animate-glow-pulse [animation-delay:3s]" />
+          <div className="absolute left-[10%] top-[20%] h-[500px] w-[500px] rounded-full bg-brand-500/8 blur-[120px] animate-glow-pulse" />
+          <div className="absolute bottom-[10%] right-[10%] h-[400px] w-[400px] rounded-full bg-brand-400/6 blur-[100px] animate-glow-pulse [animation-delay:1.5s]" />
         </div>
 
-        {/* Grid overlay */}
-        <div
-          className="absolute inset-0 opacity-[0.02]"
-          style={{
-            backgroundImage: 'linear-gradient(rgba(255,255,255,.1) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.1) 1px, transparent 1px)',
-            backgroundSize: '80px 80px',
-          }}
-        />
-
         <div className="relative z-10 mx-auto max-w-5xl px-4 text-center">
-          <div className="mb-8 inline-flex items-center gap-2 rounded-full border border-brand-500/20 bg-brand-500/10 px-5 py-2">
+          <div className="mb-8 inline-flex items-center gap-2 rounded-full border border-brand-200 bg-brand-100/60 px-5 py-2">
             <span className="h-2 w-2 rounded-full bg-brand-500 animate-pulse" />
-            <span className="text-sm font-semibold text-brand-400">Sauna, Piscina & Eventos</span>
+            <span className="text-sm font-semibold text-brand-700">Sauna, Piscina & Eventos</span>
           </div>
 
-          <h1 className="text-5xl font-extrabold leading-[1.1] text-white sm:text-6xl md:text-7xl lg:text-8xl">
+          <h1 className="text-5xl font-extrabold leading-[1.1] text-dark-900 sm:text-6xl md:text-7xl lg:text-8xl">
             <Typewriter
               words={['Sauna e Espaço da Janice']}
               typingSpeed={90}
               deletingSpeed={50}
               pauseTime={5000}
-              className="bg-gradient-to-r from-white via-brand-200 to-white bg-clip-text text-transparent"
+              className="bg-gradient-to-r from-dark-900 via-brand-600 to-dark-900 bg-clip-text text-transparent"
             />
           </h1>
 
-          <div className="mx-auto my-8 h-px w-32 bg-gradient-to-r from-transparent via-brand-500 to-transparent" />
+          <div className="mx-auto my-8 h-px w-32 bg-gradient-to-r from-transparent via-brand-400 to-transparent" />
 
-          <p className="mx-auto max-w-2xl text-lg text-dark-400 sm:text-xl">
+          <p className="mx-auto max-w-2xl text-lg text-dark-600 sm:text-xl">
             Seu espaço para relaxar, aproveitar e celebrar.
           </p>
           <p className="mx-auto mt-3 max-w-xl text-base text-dark-500">
@@ -60,7 +49,7 @@ export default function HeroSection({ whatsappPhone }: HeroSectionProps) {
               Conhecer Sauna
               <ArrowRight className="h-4 w-4 transition-transform duration-300 group-hover:translate-x-1" />
             </Link>
-            <Link href="/aluguel" className="group inline-flex items-center gap-3 rounded-2xl border-2 border-white/10 bg-white/5 px-10 py-4 text-sm font-bold text-white backdrop-blur-sm transition-all duration-300 hover:border-brand-500/30 hover:bg-white/10 hover:-translate-y-1">
+            <Link href="/aluguel" className="group inline-flex items-center gap-3 rounded-2xl border-2 border-dark-200 bg-white px-10 py-4 text-sm font-bold text-dark-800 transition-all duration-300 hover:border-brand-300 hover:bg-brand-50 hover:-translate-y-1">
               <PartyPopper className="h-5 w-5" />
               Conhecer o Aluguel
               <ArrowRight className="h-4 w-4 transition-transform duration-300 group-hover:translate-x-1" />
@@ -72,17 +61,12 @@ export default function HeroSection({ whatsappPhone }: HeroSectionProps) {
               href={getWhatsAppLink(whatsappPhone, 'Olá! Gostaria de mais informações sobre a sauna e espaço.')}
               target="_blank"
               rel="noopener noreferrer"
-              className="mt-10 inline-flex items-center gap-2 text-sm text-dark-500 transition-colors hover:text-brand-400"
+              className="mt-10 inline-flex items-center gap-2 text-sm text-dark-500 transition-colors hover:text-green-600"
             >
               <MessageCircle className="h-4 w-4" />
               ou fale conosco pelo WhatsApp
             </a>
           )}
-        </div>
-
-        {/* Scroll indicator */}
-        <div className="absolute bottom-8 left-1/2 -translate-x-1/2 animate-bounce">
-          <ChevronDown className="h-6 w-6 text-dark-500" />
         </div>
       </section>
 
