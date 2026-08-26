@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useState, useRef } from 'react';
 import {
   Loader2, Save, Trash2, Edit2, Eye, EyeOff,
-  ArrowUp, ArrowDown, ImagePlus, Upload, Link as LinkIcon, X,
+  ArrowUp, ArrowDown, ImagePlus, Upload, Link as LinkIcon, X, AlertTriangle,
 } from 'lucide-react';
 import { GALLERY_CATEGORIES } from '@/lib/utils';
 
@@ -21,7 +21,31 @@ interface GalleryImageData {
 }
 
 function isVideoUrl(url: string): boolean {
-  return /\.(mp4|webm|ogg|mov)(\?|$)/i.test(url) || url.startsWith('data:video');
+  if (!url) return false;
+  if (url.startsWith('data:video')) return true;
+  if (/\.(mp4|webm|ogg|mov)(\?|$)/i.test(url)) return true;
+  return false;
+}
+
+function compressImage(file: File, maxWidth = 1000, quality = 0.7): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    const img = new Image();
+    img.onload = () => {
+      let { width, height } = img;
+      if (width > maxWidth) {
+        height = (height * maxWidth) / width;
+        width = maxWidth;
+      }
+      canvas.width = width;
+      canvas.height = height;
+      ctx?.drawImage(img, 0, 0, width, height);
+      resolve(canvas.toDataURL('image/jpeg', quality));
+    };
+    img.onerror = () => reject(new Error('Falha ao carregar imagem'));
+    img.src = URL.createObjectURL(file);
+  });
 }
 
 export default function GaleriaPage() {
@@ -36,6 +60,7 @@ export default function GaleriaPage() {
   const [uploadMode, setUploadMode] = useState<'file' | 'url'>('file');
   const [form, setForm] = useState({ url: '', title: '', description: '', category: 'GERAL', isMain: false, published: true, sortOrder: 0 });
   const [preview, setPreview] = useState<string | null>(null);
+  const [uploadError, setUploadError] = useState('');
 
   useEffect(() => {
     if (status === 'unauthenticated') router.push('/login');
@@ -54,45 +79,84 @@ export default function GaleriaPage() {
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    setUploadError('');
 
-    if (file.size > 50 * 1024 * 1024) {
-      alert('Arquivo muito grande. Máximo 50MB.');
-      return;
-    }
+    const isVideo = file.type.startsWith('video/');
 
-    setUploading(true);
-    try {
-      const reader = new FileReader();
-      reader.onload = () => {
-        const base64 = reader.result as string;
-        setForm({ ...form, url: base64 });
+    if (isVideo) {
+      if (file.size > 10 * 1024 * 1024) {
+        setUploadError('Vídeo muito grande. Máximo 10MB.');
+        return;
+      }
+      setUploading(true);
+      try {
+        const reader = new FileReader();
+        reader.onload = () => {
+          const base64 = reader.result as string;
+          setForm(prev => ({ ...prev, url: base64 }));
+          setPreview(base64);
+          setUploading(false);
+        };
+        reader.onerror = () => { setUploadError('Erro ao ler vídeo.'); setUploading(false); };
+        reader.readAsDataURL(file);
+      } catch {
+        setUploadError('Erro ao processar vídeo.');
+        setUploading(false);
+      }
+    } else {
+      if (file.size > 20 * 1024 * 1024) {
+        setUploadError('Imagem muito grande. Máximo 20MB (será comprimida automaticamente).');
+        return;
+      }
+      setUploading(true);
+      try {
+        const base64 = await compressImage(file);
+        setForm(prev => ({ ...prev, url: base64 }));
         setPreview(base64);
         setUploading(false);
-      };
-      reader.onerror = () => {
-        alert('Erro ao ler arquivo.');
+      } catch {
+        setUploadError('Erro ao processar imagem.');
         setUploading(false);
-      };
-      reader.readAsDataURL(file);
-    } catch {
-      setUploading(false);
+      }
     }
   };
 
   const handleSave = async () => {
     if (!form.url) {
-      alert('Selecione um arquivo ou insira uma URL.');
+      setUploadError('Selecione um arquivo ou insira uma URL.');
       return;
     }
-    const apiUrl = editing ? `/api/admin/gallery/${editing.id}` : '/api/admin/gallery';
-    const method = editing ? 'PUT' : 'POST';
-    await fetch(apiUrl, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(form) });
-    setShowForm(false);
-    setEditing(null);
-    setForm({ url: '', title: '', description: '', category: 'GERAL', isMain: false, published: true, sortOrder: 0 });
-    setPreview(null);
-    setUploadMode('file');
-    fetchImages();
+
+    if (uploadMode === 'url' && form.url && !form.url.startsWith('data:') && !form.url.startsWith('http')) {
+      setUploadError('URL inválida. Deve começar com http:// ou https://');
+      return;
+    }
+
+    setUploading(true);
+    setUploadError('');
+    try {
+      const apiUrl = editing ? `/api/admin/gallery/${editing.id}` : '/api/admin/gallery';
+      const method = editing ? 'PUT' : 'POST';
+      const res = await fetch(apiUrl, {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(form),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.error || 'Save failed');
+      }
+      setShowForm(false);
+      setEditing(null);
+      setForm({ url: '', title: '', description: '', category: 'GERAL', isMain: false, published: true, sortOrder: 0 });
+      setPreview(null);
+      setUploadMode('file');
+      fetchImages();
+    } catch (e: any) {
+      setUploadError(e.message || 'Erro ao salvar. Verifique o tamanho do arquivo.');
+    } finally {
+      setUploading(false);
+    }
   };
 
   const handleDelete = async (id: string) => {
@@ -124,6 +188,7 @@ export default function GaleriaPage() {
     setEditing(null);
     setForm({ url: '', title: '', description: '', category: 'GERAL', isMain: false, published: true, sortOrder: 0 });
     setPreview(null);
+    setUploadError('');
     setUploadMode('file');
     setShowForm(true);
   };
@@ -132,6 +197,7 @@ export default function GaleriaPage() {
     setEditing(img);
     setForm({ url: img.url, title: img.title || '', description: img.description || '', category: img.category, isMain: img.isMain, published: img.published, sortOrder: img.sortOrder });
     setPreview(null);
+    setUploadError('');
     setUploadMode('url');
     setShowForm(true);
   };
@@ -164,10 +230,9 @@ export default function GaleriaPage() {
 
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div className="sm:col-span-2">
-              {/* Mode Toggle */}
               <div className="mb-3 flex gap-2">
                 <button
-                  onClick={() => { setUploadMode('file'); setPreview(null); setForm({ ...form, url: '' }); }}
+                  onClick={() => { setUploadMode('file'); setPreview(null); setForm({ ...form, url: '' }); setUploadError(''); }}
                   className={`flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold transition-colors ${
                     uploadMode === 'file' ? 'bg-brand-600 text-white' : 'bg-dark-100 text-dark-600 hover:bg-dark-200'
                   }`}
@@ -175,7 +240,7 @@ export default function GaleriaPage() {
                   <Upload className="h-4 w-4" /> Enviar arquivo
                 </button>
                 <button
-                  onClick={() => { setUploadMode('url'); setPreview(null); setForm({ ...form, url: '' }); }}
+                  onClick={() => { setUploadMode('url'); setPreview(null); setForm({ ...form, url: '' }); setUploadError(''); }}
                   className={`flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold transition-colors ${
                     uploadMode === 'url' ? 'bg-brand-600 text-white' : 'bg-dark-100 text-dark-600 hover:bg-dark-200'
                   }`}
@@ -189,7 +254,7 @@ export default function GaleriaPage() {
                   <input
                     ref={fileInputRef}
                     type="file"
-                    accept="image/*,video/mp4,video/webm,video/ogg"
+                    accept="image/jpeg,image/png,image/webp,image/gif,video/mp4,video/webm"
                     className="hidden"
                     onChange={handleFileSelect}
                   />
@@ -204,8 +269,9 @@ export default function GaleriaPage() {
                       <>
                         <Upload className="h-8 w-8 text-dark-400" />
                         <div>
-                          <p className="font-semibold text-dark-700">Clique para selecionar arquivo</p>
-                          <p className="mt-1 text-xs text-dark-400">Imagens (JPG, PNG, WebP) ou Vídeos (MP4, WebM) - Máx. 50MB</p>
+                          <p className="font-semibold text-dark-700">Clique para selecionar</p>
+                          <p className="mt-1 text-xs text-dark-400">Imagens (JPG, PNG, WebP) — será comprimida automaticamente</p>
+                          <p className="text-xs text-dark-400">Vídeos (MP4, WebM) — máx. 10MB</p>
                         </div>
                       </>
                     )}
@@ -217,14 +283,20 @@ export default function GaleriaPage() {
                   <input
                     className="input"
                     value={uploadMode === 'url' ? form.url : ''}
-                    onChange={(e) => { setForm({ ...form, url: e.target.value }); setPreview(null); }}
-                    placeholder="https://... (JPG, PNG, MP4, WEBM)"
+                    onChange={(e) => { setForm({ ...form, url: e.target.value }); setPreview(null); setUploadError(''); }}
+                    placeholder="https://exemplo.com/foto.jpg"
                   />
-                  <p className="mt-1 text-xs text-dark-400">Cole a URL de uma imagem ou vídeo</p>
+                  <p className="mt-1 text-xs text-dark-400">Link direto para imagem ou vídeo (.jpg, .png, .mp4)</p>
                 </div>
               )}
 
-              {/* Preview */}
+              {uploadError && (
+                <div className="mt-3 flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+                  <AlertTriangle className="h-4 w-4 shrink-0" />
+                  {uploadError}
+                </div>
+              )}
+
               {(preview || (uploadMode === 'url' && form.url)) && (
                 <div className="mt-4 relative inline-block">
                   {isVideoUrl(preview || form.url) ? (
@@ -233,13 +305,6 @@ export default function GaleriaPage() {
                       className="max-h-40 rounded-lg"
                       muted
                       preload="metadata"
-                      onError={(e) => {
-                        (e.target as HTMLVideoElement).style.display = 'none';
-                        const err = document.createElement('p');
-                        err.className = 'text-xs text-red-500 mt-1';
-                        err.textContent = 'Vídeo não pôde ser carregado. Verifique a URL.';
-                        (e.target as HTMLVideoElement).parentElement?.appendChild(err);
-                      }}
                     />
                   ) : (
                     <img
@@ -247,12 +312,12 @@ export default function GaleriaPage() {
                       alt="Preview"
                       className="max-h-40 rounded-lg object-cover"
                       onError={(e) => {
-                        (e.target as HTMLImageElement).src = 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="200" height="100" viewBox="0 0 200 100"><rect fill="%23f3f4f6" width="200" height="100"/><text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" fill="%239ca3af" font-size="12" font-family="sans-serif">Imagem não encontrada</text></svg>');
+                        setUploadError('Não foi possível carregar a imagem. Verifique a URL.');
                       }}
                     />
                   )}
                   <button
-                    onClick={() => { setForm({ ...form, url: '' }); setPreview(null); }}
+                    onClick={() => { setForm({ ...form, url: '' }); setPreview(null); setUploadError(''); }}
                     className="absolute -right-2 -top-2 flex h-6 w-6 items-center justify-center rounded-full bg-red-500 text-white"
                   >
                     <X className="h-3 w-3" />
@@ -292,7 +357,8 @@ export default function GaleriaPage() {
           </div>
           <div className="flex gap-2">
             <button onClick={handleSave} disabled={uploading || !form.url} className="btn-primary disabled:opacity-50">
-              <Save className="mr-2 h-4 w-4" /> {editing ? 'Salvar Alterações' : 'Adicionar'}
+              {uploading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
+              {editing ? 'Salvar' : 'Adicionar'}
             </button>
             <button onClick={() => { setShowForm(false); setEditing(null); setPreview(null); }} className="btn-secondary">Cancelar</button>
           </div>
@@ -311,7 +377,7 @@ export default function GaleriaPage() {
                   alt={img.title || ''}
                   className="h-full w-full object-cover"
                   onError={(e) => {
-                    (e.target as HTMLImageElement).src = 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="200" height="200" viewBox="0 0 200 200"><rect fill="%23f3f4f6" width="200" height="200"/><text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" fill="%239ca3af" font-size="12" font-family="sans-serif">Imagem quebrada</text></svg>');
+                    (e.target as HTMLImageElement).style.display = 'none';
                   }}
                 />
               )}
@@ -322,8 +388,8 @@ export default function GaleriaPage() {
               </div>
             </div>
             <div className="p-3">
-              <p className="font-medium text-sm text-dark-900">{img.title || 'Sem título'}</p>
-              <p className="text-xs text-dark-400">{img.category} &bull; Ordem: {img.sortOrder}</p>
+              <p className="font-medium text-sm text-dark-900 truncate">{img.title || 'Sem título'}</p>
+              <p className="text-xs text-dark-400">{img.category} &bull; #{img.sortOrder}</p>
               <div className="mt-2 flex gap-1">
                 <button onClick={() => handleTogglePublished(img)} className="rounded p-1 text-dark-400 hover:text-dark-600" title={img.published ? 'Ocultar' : 'Publicar'}>
                   {img.published ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}

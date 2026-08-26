@@ -63,6 +63,12 @@
   .glass-dark {
     @apply bg-dark-900/80 backdrop-blur-xl border border-white/10;
   }
+  .card-surface {
+    @apply rounded-2xl border border-white/[0.06] bg-white/[0.03] p-6;
+  }
+  .brand-gradient-bg {
+    background: linear-gradient(135deg, #f97316, #ea580c);
+  }
   .divider {
     @apply h-px bg-gradient-to-r from-transparent via-dark-200 to-transparent;
   }

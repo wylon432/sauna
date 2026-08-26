@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { Star, Calendar, ChevronRight, MessageCircle, MapPin, Phone } from 'lucide-react';
+import { Star, Calendar, ChevronRight, MessageCircle, MapPin, Phone, MessageSquareQuote, ArrowRight } from 'lucide-react';
 import prisma from '@/lib/prisma';
 import { formatDate, getWhatsAppLink } from '@/lib/utils';
 import HeroSection from '@/components/layout/HeroSection';
@@ -106,43 +106,103 @@ export default async function HomePage() {
         </section>
       )}
 
-      {featuredReviews.length > 0 && (
-        <section className="bg-black px-4 py-24">
-          <div className="mx-auto max-w-7xl">
-            <div className="mb-14 text-center">
-              <span className="text-xs font-bold uppercase tracking-[0.3em] text-brand-500">Depoimentos</span>
-              <h2 className="mt-3 text-3xl font-extrabold text-white sm:text-4xl">O que dizem sobre nós</h2>
-              <div className="mx-auto mt-4 h-1 w-20 rounded-full bg-gradient-to-r from-brand-500 to-brand-600"></div>
-            </div>
-            <div className="flex gap-6 overflow-x-auto pb-6 snap-x snap-mandatory" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
-              {featuredReviews.map((review) => (
-                <div key={review.id} className="min-w-[320px] max-w-[360px] shrink-0 snap-center rounded-3xl border border-white/10 bg-gradient-to-b from-white/5 to-transparent p-8 transition-all duration-500 hover:border-brand-500/30 hover:from-white/10">
-                  <svg className="mb-4 h-8 w-8 text-brand-500/40" fill="currentColor" viewBox="0 0 24 24">
-                    <path d="M14.017 21v-7.391c0-5.704 3.731-9.57 8.983-10.609l.995 2.151c-2.432.917-3.995 3.638-3.995 5.849h4v10H14.017zM0 21v-7.391c0-5.704 3.748-9.57 9-10.609l.996 2.151C7.563 6.068 6 8.789 6 11h4v10H0z"/>
-                  </svg>
-                  <div className="mb-4 flex gap-1">
+      {featuredReviews.length > 0 && (() => {
+        const totalReviews = featuredReviews.length;
+        const avgRating = totalReviews > 0 ? (featuredReviews.reduce((sum, r) => sum + r.rating, 0) / totalReviews).toFixed(1) : '0.0';
+        const ratingCounts = [5, 4, 3, 2, 1].map(star => ({
+          star,
+          count: featuredReviews.filter(r => r.rating === star).length,
+          pct: totalReviews > 0 ? (featuredReviews.filter(r => r.rating === star).length / totalReviews) * 100 : 0,
+        }));
+
+        function timeAgo(date: Date): string {
+          const diff = Date.now() - new Date(date).getTime();
+          const days = Math.floor(diff / 86400000);
+          if (days === 0) return 'hoje';
+          if (days === 1) return 'ontem';
+          if (days < 7) return `há ${days} dias`;
+          if (days < 30) return `há ${Math.floor(days / 7)} sem`;
+          return `há ${Math.floor(days / 30)} mês`;
+        }
+
+        return (
+          <section className="relative border-y border-white/[0.06] bg-white/[0.015] py-20 sm:py-24">
+            <div className="mx-auto max-w-7xl px-5">
+              <div className="max-w-2xl mx-auto text-center">
+                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-brand-300">Avaliações</p>
+                <h2 className="mt-3 text-3xl font-extrabold tracking-tight text-white sm:text-4xl">O que dizem nossos clientes</h2>
+                <p className="mt-4 text-[15px] leading-relaxed text-white/55">Experiências reais de quem já aproveitou o Sauna e Espaço da Janice.</p>
+              </div>
+
+              {/* Rating Summary */}
+              <div className="mx-auto mt-10 grid max-w-4xl gap-5 md:grid-cols-[220px_1fr]">
+                <div className="flex flex-col items-center justify-center rounded-2xl card-surface p-6 text-center">
+                  <p className="text-5xl font-extrabold text-white">{avgRating}</p>
+                  <div className="flex items-center gap-0.5 mt-3">
                     {Array.from({ length: 5 }).map((_, i) => (
-                      <Star key={i} className={`h-4 w-4 ${i < review.rating ? 'fill-brand-400 text-brand-400' : 'text-white/15'}`} />
+                      <Star key={i} className={`h-5 w-5 ${i < Math.round(Number(avgRating)) ? 'fill-amber-400 text-amber-400' : 'text-white/15'}`} />
                     ))}
                   </div>
-                  {review.comment && (
-                    <p className="mb-8 text-sm leading-relaxed text-white/70">&ldquo;{review.comment}&rdquo;</p>
-                  )}
-                  <div className="flex items-center gap-4 border-t border-white/10 pt-6">
-                    <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-brand-500 to-brand-600 text-sm font-bold text-white shadow-lg shadow-brand-600/30">
-                      {(review.user?.name || 'A')[0].toUpperCase()}
-                    </div>
-                    <div>
-                      <p className="text-sm font-bold text-white">{review.user?.name || 'Anônimo'}</p>
-                      <p className="mt-0.5 text-xs text-white/40">Cliente verificado</p>
-                    </div>
+                  <p className="mt-3 text-xs text-white/50">{totalReviews} avaliação{totalReviews !== 1 ? 's' : ''}</p>
+                </div>
+
+                <div className="rounded-2xl card-surface p-6">
+                  <div className="space-y-2.5">
+                    {ratingCounts.map(({ star, count, pct }) => (
+                      <div key={star} className="flex items-center gap-3">
+                        <span className="flex w-8 shrink-0 items-center gap-1 text-xs font-medium text-white/55">
+                          {star} <Star className="h-3 w-3 fill-amber-400 text-amber-400" />
+                        </span>
+                        <div className="h-2 flex-1 overflow-hidden rounded-full bg-white/[0.08]">
+                          <div className="h-full rounded-full brand-gradient-bg" style={{ width: `${pct}%` }} />
+                        </div>
+                        <span className="w-8 shrink-0 text-right text-xs text-white/45">{count}</span>
+                      </div>
+                    ))}
                   </div>
                 </div>
-              ))}
+              </div>
+
+              {/* Review Cards */}
+              <div className="mt-10 grid gap-5 md:grid-cols-3">
+                {featuredReviews.slice(0, 3).map((review) => (
+                  <div key={review.id} className="flex h-full flex-col rounded-2xl card-surface p-6">
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="flex items-center gap-0.5">
+                        {Array.from({ length: 5 }).map((_, i) => (
+                          <Star key={i} className={`h-3.5 w-3.5 ${i < review.rating ? 'fill-amber-400 text-amber-400' : 'text-white/15'}`} />
+                        ))}
+                      </div>
+                      <span className="text-[11px] text-white/35">{timeAgo(review.createdAt)}</span>
+                    </div>
+                    {review.comment && (
+                      <p className="mt-4 flex-1 text-[13px] leading-relaxed text-white/60">&ldquo;{review.comment}&rdquo;</p>
+                    )}
+                    <div className="mt-5 flex items-center gap-3 border-t border-white/[0.06] pt-4">
+                      <span className="flex h-9 w-9 items-center justify-center rounded-full brand-gradient-bg text-xs font-bold text-white">
+                        {(review.user?.name || 'A')[0].toUpperCase()}
+                      </span>
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-semibold text-white">{review.user?.name || 'Anônimo'}</p>
+                        <p className="truncate text-[11px] text-white/40">Cliente verificado</p>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* CTA */}
+              <div className="mt-10 text-center">
+                <Link href="/avaliacoes" className="inline-flex items-center gap-2 rounded-xl border border-white/[0.15] bg-white/[0.04] px-6 py-3 text-sm font-semibold text-white transition-colors hover:bg-white/10">
+                  <MessageSquareQuote className="h-4 w-4" />
+                  Ver todas as avaliações
+                  <ArrowRight className="h-4 w-4" />
+                </Link>
+              </div>
             </div>
-          </div>
-        </section>
-      )}
+          </section>
+        );
+      })()}
 
       {/* Localização */}
       <section className="bg-dark-950 px-4 py-24">
