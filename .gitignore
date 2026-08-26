@@ -11,3 +11,5 @@ out/
 backups/
 uploads/
 npm-debug.log*
+
+.vercel
