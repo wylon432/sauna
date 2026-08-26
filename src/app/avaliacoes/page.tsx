@@ -91,13 +91,13 @@ export default async function AvaliacoesPage() {
           <div className="lg:col-span-2">
             {session?.user ? (
               <div className="sticky top-8">
-                <div className="overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm">
-                  <div className="bg-gradient-to-r from-amber-600 to-amber-700 px-6 py-5">
+                <div className="overflow-hidden rounded-2xl border border-dark-200 bg-white shadow-premium">
+                  <div className="bg-gradient-to-r from-brand-600 to-brand-700 px-6 py-5">
                     <h2 className="flex items-center gap-2 text-lg font-bold text-white">
                       <MessageSquare className="h-5 w-5" />
                       Deixe sua avaliação
                     </h2>
-                    <p className="mt-1 text-sm text-amber-100/70">Compartilhe sua experiência</p>
+                    <p className="mt-1 text-sm text-brand-100/70">Compartilhe sua experiência</p>
                   </div>
                   <div className="p-6">
                     <AvaliacoesForm />
@@ -128,30 +128,30 @@ export default async function AvaliacoesPage() {
           {/* Reviews List */}
           <div className="lg:col-span-3 space-y-5">
             {reviews.length === 0 ? (
-              <div className="overflow-hidden rounded-2xl border border-gray-100 bg-white p-12 text-center shadow-sm">
-                <div className="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-3xl bg-gray-100">
-                  <Star className="h-10 w-10 text-gray-300" />
+              <div className="overflow-hidden rounded-2xl border border-dark-100 bg-white p-12 text-center shadow-premium">
+                <div className="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-3xl bg-dark-100">
+                  <Star className="h-10 w-10 text-dark-300" />
                 </div>
-                <h3 className="text-xl font-bold text-gray-900">Nenhuma avaliação ainda</h3>
-                <p className="mt-3 text-gray-500">Nenhuma avaliação publicada ainda.</p>
+                <h3 className="text-xl font-extrabold text-dark-900">Nenhuma avaliação ainda</h3>
+                <p className="mt-3 text-dark-500">Seja o primeiro a avaliar nosso espaço!</p>
               </div>
             ) : (
               reviews.map((review) => (
                 <div
                   key={review.id}
-                  className="overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:shadow-lg"
+                  className="overflow-hidden rounded-2xl border border-dark-100 bg-white shadow-premium transition-all duration-300 hover:-translate-y-0.5 hover:shadow-premium-lg"
                 >
                   <div className="p-6">
                     <div className="mb-4 flex items-start justify-between">
                       <div className="flex items-center gap-3">
-                        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-amber-400 to-amber-500 text-sm font-bold text-white">
+                        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-brand-400 to-brand-500 text-sm font-bold text-white">
                           {review.user.name?.charAt(0).toUpperCase() || '?'}
                         </div>
                         <div>
-                          <p className="font-semibold text-gray-900">
+                          <p className="font-semibold text-dark-900">
                             {review.user.name}
                           </p>
-                          <p className="text-xs text-gray-400">
+                          <p className="text-xs text-dark-400">
                             {formatDate(review.createdAt)}
                           </p>
                         </div>
@@ -159,8 +159,8 @@ export default async function AvaliacoesPage() {
                       <StarDisplay rating={review.rating} />
                     </div>
                     {review.comment && (
-                      <div className="rounded-xl bg-gray-50 px-5 py-4">
-                        <p className="text-sm leading-relaxed text-gray-600">{review.comment}</p>
+                      <div className="rounded-xl bg-dark-50 px-5 py-4">
+                        <p className="text-sm leading-relaxed text-dark-600">{review.comment}</p>
                       </div>
                     )}
                   </div>

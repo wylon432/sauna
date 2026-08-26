@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { ArrowRight, MessageCircle, PartyPopper, Thermometer, ChevronDown } from 'lucide-react';
+import { ArrowRight, MessageCircle, PartyPopper, Thermometer } from 'lucide-react';
 import Typewriter from '@/components/ui/Typewriter';
 import { getWhatsAppLink } from '@/lib/utils';
 
@@ -12,19 +12,19 @@ interface HeroSectionProps {
 export default function HeroSection({ whatsappPhone }: HeroSectionProps) {
   return (
     <>
-      <section className="relative flex min-h-[80vh] items-center justify-center overflow-hidden bg-gradient-to-b from-white via-brand-50/30 to-white">
+      <section className="relative flex min-h-[85vh] items-center justify-center overflow-hidden bg-gradient-to-b from-white via-brand-50/30 to-white px-4">
         <div className="absolute inset-0">
           <div className="absolute left-[10%] top-[20%] h-[500px] w-[500px] rounded-full bg-brand-500/8 blur-[120px] animate-glow-pulse" />
           <div className="absolute bottom-[10%] right-[10%] h-[400px] w-[400px] rounded-full bg-brand-400/6 blur-[100px] animate-glow-pulse [animation-delay:1.5s]" />
         </div>
 
-        <div className="relative z-10 mx-auto max-w-5xl px-4 text-center">
-          <div className="mb-8 inline-flex items-center gap-2 rounded-full border border-brand-200 bg-brand-100/60 px-5 py-2">
+        <div className="relative z-10 mx-auto max-w-5xl text-center">
+          <div className="mb-8 inline-flex items-center gap-2 rounded-full border border-brand-200 bg-brand-100/60 px-5 py-2.5">
             <span className="h-2 w-2 rounded-full bg-brand-500 animate-pulse" />
             <span className="text-sm font-semibold text-brand-700">Sauna, Piscina & Eventos</span>
           </div>
 
-          <h1 className="text-5xl font-extrabold leading-[1.1] text-dark-900 sm:text-6xl md:text-7xl lg:text-8xl">
+          <h1 className="text-4xl font-extrabold leading-[1.1] text-dark-900 sm:text-5xl md:text-6xl lg:text-7xl">
             <Typewriter
               words={['Sauna e Espaço da Janice']}
               typingSpeed={90}
@@ -44,34 +44,29 @@ export default function HeroSection({ whatsappPhone }: HeroSectionProps) {
           </p>
 
           <div className="mt-12 flex flex-col items-center justify-center gap-4 sm:flex-row">
-            <Link href="/sauna" className="group inline-flex items-center gap-3 rounded-2xl bg-brand-600 px-10 py-4 text-sm font-bold text-white shadow-xl shadow-brand-600/30 transition-all duration-300 hover:bg-brand-500 hover:shadow-2xl hover:shadow-brand-500/40 hover:-translate-y-1">
+            {whatsappPhone && (
+              <a
+                href={getWhatsAppLink(whatsappPhone, 'Olá! Gostaria de saber mais informações sobre a Sauna e Espaço da Janice e verificar a disponibilidade para reserva.')}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="group inline-flex items-center gap-3 rounded-2xl bg-green-600 px-10 py-4 text-sm font-bold text-white shadow-xl shadow-green-600/30 transition-all duration-300 hover:bg-green-500 hover:shadow-2xl hover:shadow-green-500/40 hover:-translate-y-1"
+              >
+                <MessageCircle className="h-5 w-5" />
+                Reservar pelo WhatsApp
+                <ArrowRight className="h-4 w-4 transition-transform duration-300 group-hover:translate-x-1" />
+              </a>
+            )}
+            <Link href="/sauna" className="group inline-flex items-center gap-3 rounded-2xl border-2 border-dark-200 bg-white px-10 py-4 text-sm font-bold text-dark-800 transition-all duration-300 hover:border-brand-300 hover:bg-brand-50 hover:-translate-y-1">
               <Thermometer className="h-5 w-5" />
               Conhecer Sauna
               <ArrowRight className="h-4 w-4 transition-transform duration-300 group-hover:translate-x-1" />
             </Link>
-            <Link href="/aluguel" className="group inline-flex items-center gap-3 rounded-2xl border-2 border-dark-200 bg-white px-10 py-4 text-sm font-bold text-dark-800 transition-all duration-300 hover:border-brand-300 hover:bg-brand-50 hover:-translate-y-1">
-              <PartyPopper className="h-5 w-5" />
-              Conhecer o Aluguel
-              <ArrowRight className="h-4 w-4 transition-transform duration-300 group-hover:translate-x-1" />
-            </Link>
           </div>
-
-          {whatsappPhone && (
-            <a
-              href={getWhatsAppLink(whatsappPhone, 'Olá! Gostaria de mais informações sobre a sauna e espaço.')}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="mt-10 inline-flex items-center gap-2 text-sm text-dark-500 transition-colors hover:text-green-600"
-            >
-              <MessageCircle className="h-4 w-4" />
-              ou fale conosco pelo WhatsApp
-            </a>
-          )}
         </div>
       </section>
 
       {/* Service Cards */}
-      <section className="relative -mt-20 z-20 mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+      <section className="relative z-20 mx-auto max-w-7xl px-4 pb-20 pt-16 sm:px-6 lg:px-8">
         <div className="grid gap-8 sm:grid-cols-2">
           <Link href="/sauna" className="group rounded-2xl border border-dark-100 bg-white p-8 shadow-2xl shadow-black/5 transition-all duration-300 hover:shadow-3xl hover:-translate-y-2">
             <div className="mb-5 inline-flex h-14 w-14 items-center justify-center rounded-2xl bg-brand-100 transition-colors duration-300 group-hover:bg-brand-600">

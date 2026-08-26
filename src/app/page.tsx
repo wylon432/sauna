@@ -1,13 +1,14 @@
 import Link from 'next/link';
-import { Star, Calendar, ChevronRight, MessageCircle } from 'lucide-react';
+import { Star, Calendar, ChevronRight, MessageCircle, MapPin, Phone } from 'lucide-react';
 import prisma from '@/lib/prisma';
 import { formatDate, getWhatsAppLink } from '@/lib/utils';
 import HeroSection from '@/components/layout/HeroSection';
+import GalleryCarousel from '@/components/home/GalleryCarousel';
 
 export const dynamic = 'force-dynamic';
 
 export default async function HomePage() {
-  const [latestNews, activeAnnouncements, featuredReviews, whatsappSetting] = await Promise.all([
+  const [latestNews, activeAnnouncements, featuredReviews, whatsappSetting, galleryImages] = await Promise.all([
     prisma.news.findMany({
       where: { status: 'PUBLISHED' },
       orderBy: { publishedAt: 'desc' },
@@ -24,16 +25,33 @@ export default async function HomePage() {
       include: { user: true },
     }),
     prisma.systemSetting.findUnique({ where: { key: 'whatsapp_main' } }),
+    prisma.galleryImage.findMany({
+      where: { published: true },
+      orderBy: [{ isMain: 'desc' }, { sortOrder: 'asc' }, { createdAt: 'desc' }],
+      take: 12,
+    }),
   ]);
 
   const whatsappPhone = whatsappSetting?.value || '';
+
+  const serializedGallery = galleryImages.map((img) => ({
+    id: img.id,
+    title: img.title,
+    url: img.url,
+    category: img.category,
+  }));
 
   return (
     <div className="min-h-screen">
       <HeroSection whatsappPhone={whatsappPhone} />
 
+      {/* Gallery Carousel */}
+      {serializedGallery.length > 0 && (
+        <GalleryCarousel images={serializedGallery} />
+      )}
+
       {activeAnnouncements.length > 0 && (
-        <section className="bg-brand-50 px-4 py-12">
+        <section className="bg-brand-50/60 px-4 py-12">
           <div className="mx-auto max-w-7xl">
             <h2 className="mb-6 text-xl font-extrabold text-dark-900">Avisos</h2>
             <div className="space-y-3">
@@ -56,21 +74,17 @@ export default async function HomePage() {
       {latestNews.length > 0 && (
         <section className="px-4 py-20">
           <div className="mx-auto max-w-7xl">
-            <div className="mb-10 flex items-end justify-between">
-              <div>
-                <span className="text-sm font-bold uppercase tracking-widest text-brand-600">Novidades</span>
-                <h2 className="mt-2 text-2xl font-extrabold text-dark-900">Últimas Notícias</h2>
-              </div>
-              <Link href="/noticias" className="flex items-center gap-1 text-sm font-bold text-brand-600 hover:text-brand-700">
-                Ver todas <ChevronRight className="h-4 w-4" />
-              </Link>
+            <div className="mb-10 text-center">
+              <span className="text-sm font-bold uppercase tracking-widest text-brand-600">Novidades</span>
+              <h2 className="mt-2 text-2xl font-extrabold text-dark-900 sm:text-3xl">Últimas Notícias</h2>
+              <p className="mt-2 text-dark-500">Fique por dentro do que acontece no espaço</p>
             </div>
             <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-3">
               {latestNews.map((news) => (
                 <Link key={news.id} href={`/noticia/${news.slug}`} className="group overflow-hidden rounded-2xl border border-dark-100 bg-white shadow-premium transition-all duration-300 hover:shadow-premium-lg hover:-translate-y-1">
                   {news.image ? (
                     <div className="h-52 overflow-hidden">
-                      <img src={news.image} alt={news.title} className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110" />
+                      <img src={news.image} alt={news.title} className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110" loading="lazy" />
                     </div>
                   ) : (
                     <div className="flex h-52 items-center justify-center bg-dark-100">
@@ -93,12 +107,13 @@ export default async function HomePage() {
       {featuredReviews.length > 0 && (
         <section className="bg-gradient-to-b from-brand-50/40 to-white px-4 py-20">
           <div className="mx-auto max-w-7xl">
-            <h2 className="mb-10 text-center text-2xl font-extrabold text-dark-900">
-              O que dizem sobre nós
-            </h2>
+            <div className="mb-10 text-center">
+              <span className="text-sm font-bold uppercase tracking-widest text-brand-600">Depoimentos</span>
+              <h2 className="mt-2 text-2xl font-extrabold text-dark-900 sm:text-3xl">O que dizem sobre nós</h2>
+            </div>
             <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
               {featuredReviews.map((review) => (
-                <div key={review.id} className="rounded-2xl border border-dark-200 bg-white p-6 shadow-premium">
+                <div key={review.id} className="rounded-2xl border border-dark-100 bg-white p-6 shadow-premium transition-all duration-300 hover:-translate-y-1 hover:shadow-premium-lg">
                   <div className="mb-3 flex gap-1">
                     {Array.from({ length: 5 }).map((_, i) => (
                       <Star key={i} className={`h-4 w-4 ${i < review.rating ? 'fill-brand-400 text-brand-400' : 'text-dark-300'}`} />
@@ -128,7 +143,7 @@ export default async function HomePage() {
             <h2 className="mt-2 text-3xl font-extrabold text-white">Veja como é o local</h2>
             <p className="mt-3 text-dark-400">Confira o vídeo e descubra tudo que o Sauna e Espaço da Janice tem a oferecer</p>
           </div>
-          <div className="overflow-hidden rounded-2xl border border-dark-800 bg-dark-900/50 p-3 shadow-2xl">
+          <div className="overflow-hidden rounded-2xl border border-dark-800 bg-dark-900/50 p-2 sm:p-3 shadow-2xl">
             <video
               className="w-full rounded-xl"
               controls
@@ -155,13 +170,66 @@ export default async function HomePage() {
         </div>
       </section>
 
-      {/* Grupo de WhatsApp */}
+      {/* Localização */}
       <section className="px-4 py-20">
+        <div className="mx-auto max-w-7xl">
+          <div className="mb-10 text-center">
+            <span className="text-sm font-bold uppercase tracking-widest text-brand-600">Localização</span>
+            <h2 className="mt-2 text-2xl font-extrabold text-dark-900 sm:text-3xl">Como chegar</h2>
+          </div>
+          <div className="grid gap-8 lg:grid-cols-2">
+            <div className="overflow-hidden rounded-2xl border border-dark-200 bg-white shadow-premium">
+              <iframe
+                src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3682.5!2d-49.9469!3d-22.2141!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x0%3A0x0!2zMjLCsDEyJzUwLjgiUyA0OcKwNTYnNDguOCJX!5e0!3m2!1spt-BR!2sbr!4v1"
+                width="100%"
+                height="350"
+                style={{ border: 0 }}
+                allowFullScreen
+                loading="lazy"
+                referrerPolicy="no-referrer-when-downgrade"
+                className="w-full"
+              />
+            </div>
+            <div className="flex flex-col justify-center space-y-6">
+              <div className="flex items-start gap-4">
+                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-brand-100">
+                  <MapPin className="h-6 w-6 text-brand-600" />
+                </div>
+                <div>
+                  <h3 className="font-extrabold text-dark-900">Endereço</h3>
+                  <p className="mt-1 text-dark-500">Rua Cecílio Bernardes, 2245 - Marília (rua da cobeb)</p>
+                </div>
+              </div>
+              <div className="flex items-start gap-4">
+                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-brand-100">
+                  <Phone className="h-6 w-6 text-brand-600" />
+                </div>
+                <div>
+                  <h3 className="font-extrabold text-dark-900">Contato</h3>
+                  <p className="mt-1 text-dark-500">(37) 99939-2529</p>
+                </div>
+              </div>
+              <a
+                href="https://www.google.com/maps/search/Rua+Cecílio+Bernardes+2245+Marília"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="btn-primary inline-flex items-center gap-2 self-start"
+              >
+                <MapPin className="h-4 w-4" />
+                Abrir no Google Maps
+              </a>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Grupo de WhatsApp */}
+      <section className="bg-gradient-to-b from-green-50/40 to-white px-4 py-20">
         <div className="mx-auto max-w-2xl text-center">
           <div className="inline-flex h-16 w-16 items-center justify-center rounded-2xl bg-green-100">
             <MessageCircle className="h-8 w-8 text-green-600" />
           </div>
-          <h2 className="mt-6 text-2xl font-extrabold text-dark-900">Entrou no Grupo de WhatsApp</h2>
+          <h2 className="mt-6 text-2xl font-extrabold text-dark-900 sm:text-3xl">Entrou no Grupo de WhatsApp</h2>
           <p className="mt-3 text-dark-500">
             Fique por dentro das novidades, promoções e eventos. Participe do nosso grupo exclusivo!
           </p>

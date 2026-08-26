@@ -1,6 +1,6 @@
 import { CalendarDays, Clock, Sparkles } from 'lucide-react';
 import prisma from '@/lib/prisma';
-import { GENDERS, DAYS_OF_WEEK, formatDate } from '@/lib/utils';
+import { GENDERS, DAYS_OF_WEEK } from '@/lib/utils';
 import DisponibilidadeClient from './DisponibilidadeClient';
 
 export const dynamic = 'force-dynamic';
@@ -11,7 +11,7 @@ export const metadata = {
 };
 
 export default async function DisponibilidadePage() {
-  const [schedules, calendarBlocks, rentalReservations] = await Promise.all([
+  const [schedules, calendarBlocks, rentalReservations, saunaReservations] = await Promise.all([
     prisma.saunaSchedule.findMany({
       where: { active: true },
       orderBy: [{ dayOfWeek: 'asc' }, { gender: 'asc' }],
@@ -27,6 +27,16 @@ export default async function DisponibilidadePage() {
       },
       orderBy: { date: 'asc' },
       include: { package: true },
+    }),
+    prisma.saunaReservation.findMany({
+      where: {
+        status: { notIn: ['CANCELLED'] },
+        date: { gte: new Date() },
+      },
+      orderBy: { date: 'asc' },
+      include: {
+        schedule: { select: { gender: true, startTime: true, endTime: true } },
+      },
     }),
   ]);
 
@@ -50,6 +60,17 @@ export default async function DisponibilidadePage() {
     endDate: r.endDate?.toISOString() || null,
     status: r.status,
     packageName: r.package?.name || '',
+    type: 'RENTAL' as const,
+  }));
+
+  const serializedSaunaReservations = saunaReservations.map((r) => ({
+    id: r.id,
+    date: r.date.toISOString(),
+    status: r.status,
+    gender: r.schedule?.gender || '',
+    startTime: r.schedule?.startTime || '',
+    endTime: r.schedule?.endTime || '',
+    type: 'SAUNA' as const,
   }));
 
   return (
@@ -69,96 +90,126 @@ export default async function DisponibilidadePage() {
             Disponibilidade
           </h1>
           <p className="mx-auto mt-6 max-w-2xl text-lg text-dark-600">
-            Confira a disponibilidade da sauna e do espaço para aluguel.
+            Confira os horários da sauna e a disponibilidade do espaço para aluguel.
           </p>
         </div>
       </section>
 
-      <section className="mx-auto max-w-7xl px-4 py-20 sm:px-6 lg:px-8">
-        {/* Sauna Schedule */}
-        <div className="mb-20">
-          <div className="mb-10">
-            <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-brand-100">
-                <Clock className="h-5 w-5 text-brand-600" />
-              </div>
-              <div>
-                <h2 className="text-2xl font-extrabold text-dark-900">Horários da Sauna</h2>
-                <p className="text-sm text-dark-500">Funcionamento por gênero</p>
-              </div>
+      {/* Section 1: Sauna Schedule */}
+      <section className="mx-auto max-w-7xl px-4 py-16 sm:px-6 lg:px-8">
+        <div className="mb-10">
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-brand-100">
+              <Clock className="h-5 w-5 text-brand-600" />
+            </div>
+            <div>
+              <h2 className="text-2xl font-extrabold text-dark-900">Horários da Sauna</h2>
+              <p className="text-sm text-dark-500">Funcionamento por gênero</p>
             </div>
           </div>
-
-          {schedules.length === 0 ? (
-            <div className="mx-auto max-w-lg text-center">
-              <div className="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-3xl bg-brand-100">
-                <Clock className="h-10 w-10 text-brand-600" />
-              </div>
-              <h3 className="text-xl font-extrabold text-dark-900">Horários em breve</h3>
-              <p className="mt-3 text-dark-500">Horários ainda não disponíveis.</p>
-            </div>
-          ) : (
-            <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-              {Object.entries(groupedSchedules)
-                .sort(([a], [b]) => Number(a) - Number(b))
-                .map(([day, daySchedules]) => (
-                  <div
-                    key={day}
-                    className="overflow-hidden rounded-2xl border border-dark-200 bg-white shadow-premium transition-all duration-300 hover:-translate-y-1 hover:shadow-premium-lg"
-                  >
-                    <div className="bg-brand-600 px-6 py-4">
-                      <h3 className="text-lg font-extrabold text-white">
-                        {DAYS_OF_WEEK[Number(day)] || `Dia ${day}`}
-                      </h3>
-                    </div>
-                    <div className="p-5 space-y-3">
-                      {daySchedules.map((s) => (
-                        <div
-                          key={s.id}
-                          className="flex items-center justify-between rounded-xl bg-dark-50 px-4 py-3"
-                        >
-                          <span
-                            className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-bold ${
-                              s.gender === 'FEMININO'
-                                ? 'bg-pink-100 text-pink-700'
-                                : 'bg-blue-100 text-blue-700'
-                            }`}
-                          >
-                            {GENDERS[s.gender] || s.gender}
-                          </span>
-                          <span className="text-sm font-bold text-dark-900">
-                            {s.startTime} - {s.endTime}
-                          </span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                ))}
-            </div>
-          )}
         </div>
 
-        {/* Rental Calendar */}
-        <div>
-          <div className="mb-10">
-            <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-brand-100">
-                <CalendarDays className="h-5 w-5 text-brand-600" />
-              </div>
-              <div>
-                <h2 className="text-2xl font-extrabold text-dark-900">Calendário de Aluguel</h2>
-                <p className="text-sm text-dark-500">Datas disponíveis e bloqueadas</p>
-              </div>
+        {schedules.length === 0 ? (
+          <div className="mx-auto max-w-lg text-center">
+            <div className="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-3xl bg-brand-100">
+              <Clock className="h-10 w-10 text-brand-600" />
+            </div>
+            <h3 className="text-xl font-extrabold text-dark-900">Horários em breve</h3>
+            <p className="mt-3 text-dark-500">Horários ainda não disponíveis.</p>
+          </div>
+        ) : (
+          <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+            {Object.entries(groupedSchedules)
+              .sort(([a], [b]) => Number(a) - Number(b))
+              .map(([day, daySchedules]) => (
+                <div
+                  key={day}
+                  className="overflow-hidden rounded-2xl border border-dark-200 bg-white shadow-premium transition-all duration-300 hover:-translate-y-1 hover:shadow-premium-lg"
+                >
+                  <div className="bg-brand-600 px-6 py-4">
+                    <h3 className="text-lg font-extrabold text-white">
+                      {DAYS_OF_WEEK[Number(day)] || `Dia ${day}`}
+                    </h3>
+                  </div>
+                  <div className="p-5 space-y-3">
+                    {daySchedules.map((s) => (
+                      <div
+                        key={s.id}
+                        className="flex items-center justify-between rounded-xl bg-dark-50 px-4 py-3"
+                      >
+                        <span
+                          className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-bold ${
+                            s.gender === 'FEMININO'
+                              ? 'bg-pink-100 text-pink-700'
+                              : 'bg-blue-100 text-blue-700'
+                          }`}
+                        >
+                          {GENDERS[s.gender] || s.gender}
+                        </span>
+                        <span className="text-sm font-bold text-dark-900">
+                          {s.startTime} - {s.endTime}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
+          </div>
+        )}
+
+        {/* Sauna reservations for current month */}
+        {serializedSaunaReservations.length > 0 && (
+          <div className="mt-10">
+            <h3 className="mb-4 text-lg font-extrabold text-dark-900">Próximas reservas de sauna</h3>
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              {serializedSaunaReservations.slice(0, 6).map((r) => (
+                <div key={r.id} className="flex items-center gap-3 rounded-xl border border-dark-100 bg-white p-4 shadow-sm">
+                  <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full ${
+                    r.gender === 'FEMININO' ? 'bg-pink-100 text-pink-600' : 'bg-blue-100 text-blue-600'
+                  }`}>
+                    <Clock className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-bold text-dark-900">
+                      {new Date(r.date).toLocaleDateString('pt-BR', { weekday: 'short', day: '2-digit', month: 'short' })}
+                    </p>
+                    <p className="text-xs text-dark-500">
+                      {r.gender === 'FEMININO' ? 'Feminino' : 'Masculino'} • {r.startTime} - {r.endTime}
+                    </p>
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
+        )}
+      </section>
 
-          <div className="overflow-hidden rounded-2xl border border-dark-200 bg-white shadow-premium">
-            <div className="p-6 sm:p-8">
-              <DisponibilidadeClient
-                calendarBlocks={serializedBlocks}
-                rentalReservations={serializedReservations}
-              />
+      {/* Divider */}
+      <div className="mx-auto max-w-7xl px-4">
+        <div className="h-px bg-gradient-to-r from-transparent via-dark-200 to-transparent" />
+      </div>
+
+      {/* Section 2: Rental Calendar */}
+      <section className="mx-auto max-w-7xl px-4 py-16 sm:px-6 lg:px-8">
+        <div className="mb-10">
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-brand-100">
+              <CalendarDays className="h-5 w-5 text-brand-600" />
             </div>
+            <div>
+              <h2 className="text-2xl font-extrabold text-dark-900">Calendário de Aluguel</h2>
+              <p className="text-sm text-dark-500">Veja quais datas estão disponíveis para festas e eventos</p>
+            </div>
+          </div>
+        </div>
+
+        <div className="overflow-hidden rounded-2xl border border-dark-200 bg-white shadow-premium">
+          <div className="p-6 sm:p-8">
+            <DisponibilidadeClient
+              calendarBlocks={serializedBlocks}
+              rentalReservations={serializedReservations}
+              saunaReservations={serializedSaunaReservations}
+            />
           </div>
         </div>
       </section>

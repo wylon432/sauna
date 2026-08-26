@@ -6,7 +6,7 @@ import { usePathname } from 'next/navigation';
 import { useSession, signOut } from 'next-auth/react';
 import {
   Flame, Menu, X, LogIn, User, LogOut, ChevronDown,
-  CalendarCheck, UserCircle, LayoutDashboard,
+  CalendarCheck, UserCircle, LayoutDashboard, Star,
 } from 'lucide-react';
 
 const navLinks = [
@@ -16,6 +16,7 @@ const navLinks = [
   { href: '/disponibilidade', label: 'Disponibilidade' },
   { href: '/galeria', label: 'Galeria' },
   { href: '/noticias', label: 'Notícias' },
+  { href: '/avaliacoes', label: 'Avaliações' },
   { href: '/contato', label: 'Contato' },
 ];
 
@@ -32,6 +33,15 @@ export default function Header() {
     return () => window.removeEventListener('scroll', onScroll);
   }, []);
 
+  useEffect(() => {
+    if (mobileOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => { document.body.style.overflow = ''; };
+  }, [mobileOpen]);
+
   const isActive = (href: string) => {
     if (href === '/') return pathname === '/';
     return pathname.startsWith(href);
@@ -43,8 +53,8 @@ export default function Header() {
     <header
       className={`sticky top-0 z-50 transition-all duration-300 ${
         scrolled
-          ? 'bg-white/90 backdrop-blur-xl shadow-lg shadow-black/5'
-          : 'bg-white/70 backdrop-blur-md'
+          ? 'bg-white/95 shadow-lg shadow-black/5 backdrop-blur-xl'
+          : 'bg-white/80 backdrop-blur-md'
       }`}
     >
       <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
@@ -140,15 +150,16 @@ export default function Header() {
         </div>
       </div>
 
+      {/* Mobile Menu */}
       {mobileOpen && (
-        <div className="border-t border-dark-100 bg-white/95 backdrop-blur-xl lg:hidden animate-fade-in">
-          <nav className="space-y-1 px-4 py-4">
+        <div className="fixed inset-x-0 top-16 bottom-0 z-40 border-t border-dark-100 bg-white/98 backdrop-blur-xl lg:hidden animate-fade-in">
+          <nav className="mx-auto max-w-7xl space-y-1 px-4 py-6">
             {navLinks.map((link) => (
               <Link
                 key={link.href}
                 href={link.href}
                 onClick={() => setMobileOpen(false)}
-                className={`block rounded-xl px-4 py-3 text-sm font-semibold transition-all duration-200 ${
+                className={`flex items-center rounded-xl px-4 py-3.5 text-sm font-semibold transition-all duration-200 ${
                   isActive(link.href)
                     ? 'bg-brand-50 text-brand-700 border-l-4 border-brand-600'
                     : 'text-dark-600 hover:bg-dark-50 hover:text-dark-900'
@@ -157,6 +168,18 @@ export default function Header() {
                 {link.label}
               </Link>
             ))}
+            {!session && (
+              <div className="mt-4 border-t border-dark-100 pt-4">
+                <Link
+                  href="/login"
+                  onClick={() => setMobileOpen(false)}
+                  className="flex items-center justify-center gap-2 rounded-xl bg-brand-600 px-6 py-3 text-sm font-bold text-white"
+                >
+                  <LogIn className="h-4 w-4" />
+                  Entrar
+                </Link>
+              </div>
+            )}
           </nav>
         </div>
       )}

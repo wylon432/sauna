@@ -8,10 +8,12 @@ import {
   LayoutDashboard, Flame, Key, CalendarDays, DollarSign, Users,
   Star, Wine, ImageIcon, Newspaper, AlertTriangle, FileText,
   ShieldCheck, Settings, Menu, X, ChevronLeft, LogOut, Loader2,
+  ClipboardList,
 } from 'lucide-react';
 
 const NAV_ITEMS = [
   { href: '/admin', label: 'Dashboard', icon: LayoutDashboard },
+  { href: '/admin/comandas', label: 'Comandas', icon: ClipboardList },
   { href: '/admin/sauna', label: 'Sauna', icon: Flame },
   { href: '/admin/aluguel', label: 'Aluguel', icon: Key },
   { href: '/admin/calendario', label: 'Calendário', icon: CalendarDays },
