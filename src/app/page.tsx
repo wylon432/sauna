@@ -105,28 +105,35 @@ export default async function HomePage() {
       )}
 
       {featuredReviews.length > 0 && (
-        <section className="bg-dark-950 px-4 py-20">
+        <section className="bg-black px-4 py-24">
           <div className="mx-auto max-w-7xl">
-            <div className="mb-10 text-center">
-              <span className="text-sm font-bold uppercase tracking-widest text-brand-400">Depoimentos</span>
-              <h2 className="mt-2 text-2xl font-extrabold text-white sm:text-3xl">O que dizem sobre nós</h2>
+            <div className="mb-14 text-center">
+              <span className="text-xs font-bold uppercase tracking-[0.3em] text-brand-500">Depoimentos</span>
+              <h2 className="mt-3 text-3xl font-extrabold text-white sm:text-4xl">O que dizem sobre nós</h2>
+              <div className="mx-auto mt-4 h-1 w-20 rounded-full bg-gradient-to-r from-brand-500 to-brand-600"></div>
             </div>
-            <div className="flex gap-6 overflow-x-auto pb-4 snap-x snap-mandatory scrollbar-hide" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+            <div className="flex gap-6 overflow-x-auto pb-6 snap-x snap-mandatory" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
               {featuredReviews.map((review) => (
-                <div key={review.id} className="min-w-[300px] max-w-[340px] shrink-0 snap-center rounded-2xl border border-dark-700 bg-dark-900/80 p-6 shadow-2xl transition-all duration-300 hover:border-brand-500/40 hover:bg-dark-800/80">
-                  <div className="mb-3 flex gap-1">
+                <div key={review.id} className="min-w-[320px] max-w-[360px] shrink-0 snap-center rounded-3xl border border-white/10 bg-gradient-to-b from-white/5 to-transparent p-8 transition-all duration-500 hover:border-brand-500/30 hover:from-white/10">
+                  <svg className="mb-4 h-8 w-8 text-brand-500/40" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M14.017 21v-7.391c0-5.704 3.731-9.57 8.983-10.609l.995 2.151c-2.432.917-3.995 3.638-3.995 5.849h4v10H14.017zM0 21v-7.391c0-5.704 3.748-9.57 9-10.609l.996 2.151C7.563 6.068 6 8.789 6 11h4v10H0z"/>
+                  </svg>
+                  <div className="mb-4 flex gap-1">
                     {Array.from({ length: 5 }).map((_, i) => (
-                      <Star key={i} className={`h-4 w-4 ${i < review.rating ? 'fill-brand-400 text-brand-400' : 'text-dark-600'}`} />
+                      <Star key={i} className={`h-4 w-4 ${i < review.rating ? 'fill-brand-400 text-brand-400' : 'text-white/15'}`} />
                     ))}
                   </div>
                   {review.comment && (
-                    <p className="mb-4 line-clamp-3 text-sm text-dark-300">&ldquo;{review.comment}&rdquo;</p>
+                    <p className="mb-8 text-sm leading-relaxed text-white/70">&ldquo;{review.comment}&rdquo;</p>
                   )}
-                  <div className="flex items-center gap-3">
-                    <div className="flex h-8 w-8 items-center justify-center rounded-full bg-brand-600 text-xs font-bold text-white">
+                  <div className="flex items-center gap-4 border-t border-white/10 pt-6">
+                    <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-brand-500 to-brand-600 text-sm font-bold text-white shadow-lg shadow-brand-600/30">
                       {(review.user?.name || 'A')[0].toUpperCase()}
                     </div>
-                    <p className="text-sm font-medium text-dark-200">{review.user?.name || 'Anônimo'}</p>
+                    <div>
+                      <p className="text-sm font-bold text-white">{review.user?.name || 'Anônimo'}</p>
+                      <p className="mt-0.5 text-xs text-white/40">Cliente verificado</p>
+                    </div>
                   </div>
                 </div>
               ))}
