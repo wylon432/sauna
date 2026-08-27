@@ -8,12 +8,7 @@ import GalleryCarousel from '@/components/home/GalleryCarousel';
 export const dynamic = 'force-dynamic';
 
 export default async function HomePage() {
-  const [latestNews, activeAnnouncements, featuredReviews, whatsappSetting, galleryImages] = await Promise.all([
-    prisma.news.findMany({
-      where: { status: 'PUBLISHED' },
-      orderBy: { publishedAt: 'desc' },
-      take: 3,
-    }),
+  const [activeAnnouncements, featuredReviews, whatsappSetting, galleryImages] = await Promise.all([
     prisma.announcement.findMany({
       where: { active: true, endDate: { gte: new Date() } },
       orderBy: { createdAt: 'desc' },
@@ -67,39 +62,6 @@ export default async function HomePage() {
                     </p>
                   </div>
                 </div>
-              ))}
-            </div>
-          </div>
-        </section>
-      )}
-
-      {latestNews.length > 0 && (
-        <section className="bg-black px-4 py-24">
-          <div className="mx-auto max-w-7xl">
-            <div className="mb-14 text-center">
-              <span className="text-xs font-bold uppercase tracking-[0.3em] text-brand-500">Novidades</span>
-              <h2 className="mt-3 text-3xl font-extrabold text-white sm:text-4xl">Últimas Notícias</h2>
-              <div className="mx-auto mt-4 h-1 w-20 rounded-full bg-gradient-to-r from-brand-500 to-brand-600"></div>
-            </div>
-            <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-3">
-              {latestNews.map((news) => (
-                <Link key={news.id} href={`/noticia/${news.slug}`} className="group overflow-hidden rounded-3xl border border-white/10 bg-white/5 transition-all duration-500 hover:border-brand-500/30 hover:bg-white/10 hover:-translate-y-2">
-                  {news.image ? (
-                    <div className="h-56 overflow-hidden">
-                      <img src={news.image} alt={news.title} className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-110" loading="lazy" />
-                    </div>
-                  ) : (
-                    <div className="flex h-56 items-center justify-center bg-white/5">
-                      <span className="text-sm font-medium text-white/30">Sem imagem</span>
-                    </div>
-                  )}
-                  <div className="p-7">
-                    <span className="inline-flex rounded-full bg-brand-600/20 px-3 py-1 text-xs font-bold text-brand-400">{news.category}</span>
-                    <h3 className="mt-4 text-lg font-extrabold text-white transition-colors group-hover:text-brand-400">{news.title}</h3>
-                    {news.summary && <p className="mt-3 line-clamp-2 text-sm text-white/50">{news.summary}</p>}
-                    <p className="mt-4 text-xs font-medium text-white/30">{formatDate(news.publishedAt || news.createdAt)}</p>
-                  </div>
-                </Link>
               ))}
             </div>
           </div>

@@ -6,7 +6,7 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import {
   LayoutDashboard, Flame, Key, CalendarDays, DollarSign, Users,
-  Star, Wine, ImageIcon, Newspaper, AlertTriangle, FileText,
+  Star, Wine, ImageIcon, AlertTriangle, FileText,
   ShieldCheck, Settings, Menu, X, ChevronLeft, LogOut, Loader2,
   ClipboardList,
 } from 'lucide-react';
@@ -23,7 +23,6 @@ const NAV_ITEMS = [
   { href: '/admin/avaliacoes', label: 'Avaliações', icon: Star },
   { href: '/admin/bebidas', label: 'Bebidas', icon: Wine },
   { href: '/admin/galeria', label: 'Galeria', icon: ImageIcon },
-  { href: '/admin/noticias', label: 'Notícias', icon: Newspaper },
   { href: '/admin/avisos', label: 'Avisos', icon: AlertTriangle },
   { href: '/admin/termos', label: 'Termos', icon: FileText },
   { href: '/admin/regras', label: 'Regras', icon: ShieldCheck },

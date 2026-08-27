@@ -63,7 +63,7 @@ export default async function SaunaPage() {
 
         <div className="prose prose-lg max-w-none text-dark-600">
           <p className="text-lg leading-relaxed">
-            A <strong>Sauna e Espaço da Janice</strong> foi criada para oferecer uma experiência completa de relaxamento e lazer. Nosso espaço conta com <strong>sauna seca</strong> e <strong>piscina</strong>, ambientes preparados para proporcionar momentos de descontração e descanso após uma semana de muito trabalho.
+            A <strong>Sauna e Espaço da Janice</strong> foi criada para oferecer uma experiência completa de relaxamento e lazer. Nosso espaço conta com <strong>sauna a vapor</strong> e <strong>piscina</strong>, ambientes preparados para proporcionar momentos de descontração e descanso após uma semana de muito trabalho.
           </p>
 
           <p className="leading-relaxed">
@@ -75,7 +75,7 @@ export default async function SaunaPage() {
           </p>
 
           <p className="leading-relaxed">
-            Ao chegar, você terá acesso completo à <strong>sauna</strong> e à <strong>piscina</strong>. A sauna seca é ideal para relaxar os músculos, aliviar o estresse e melhorar a circulação sanguínea. A piscina complementa a experiência, oferecendo uma sensação refrescante e rejuvenescedora. Os dois ambientes trabalham juntos para proporcionar uma experiência de bem-estar completa.
+            Ao chegar, você terá acesso completo à <strong>sauna a vapor</strong> e à <strong>piscina</strong>. A sauna a vapor é ideal para relaxar os músculos, aliviar o estresse e melhorar a circulação sanguínea. A piscina complementa a experiência, oferecendo uma sensação refrescante e rejuvenescedora. Os dois ambientes trabalham juntos para proporcionar uma experiência de bem-estar completa.
           </p>
 
           <p className="leading-relaxed">
@@ -157,7 +157,7 @@ export default async function SaunaPage() {
                 Você poderá <strong>trazer sua própria comida</strong> para consumir no local. Seja um lanche ou uma refeição leve, fique à vontade para trazer o que desejar. A única exigência é que o espaço seja mantido limpo e conservado após o uso.
               </p>
               <p className="leading-relaxed">
-                Para sua comodidade, o espaço conta com uma <strong>Air Fry</strong> disponível para uso dos clientes. Com ela, você pode preparar alimentos de forma rápida e prática, sem necessidade de levar panelas ou utensílios extras. Também há um <strong>fogão disponível</strong> para quem desejar preparar algo mais elaborado.
+                Para sua comodidade, o espaço conta com <strong>fogão, panelas e Air Fry</strong> disponíveis para uso dos clientes. Com esses equipamentos, você pode preparar alimentos de forma rápida e prática — de um lanche simples a uma refeição mais elaborada. Pedimos que todos utilizem com cuidado e responsabilidade, e deixem tudo limpo e organizado após o uso.
               </p>
               <p className="leading-relaxed">
                 Pedimos que todos os clientes utilizem os equipamentos de cozinha com cuidado e responsabilidade, e que deixem tudo limpo e organizado após o uso. Isso garante que o espaço esteja em boas condições para todos.

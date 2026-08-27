@@ -12,7 +12,6 @@ import {
   Plus,
   CreditCard,
   GlassWater,
-  Newspaper,
   Megaphone,
   ImagePlus,
   Loader2,
@@ -103,7 +102,6 @@ export default function AdminDashboard() {
     { label: '+ Nova Reserva', href: '/admin/aluguel?new=1', icon: Plus, color: 'bg-sauna-600 hover:bg-sauna-700' },
     { label: 'Registrar Pagamento', href: '/admin/pagamentos?new=1', icon: CreditCard, color: 'bg-green-600 hover:bg-green-700' },
     { label: 'Registrar Consumo', href: '/admin/bebidas?consume=1', icon: GlassWater, color: 'bg-pool-600 hover:bg-pool-700' },
-    { label: 'Publicar Notícia', href: '/admin/noticias?new=1', icon: Newspaper, color: 'bg-party-600 hover:bg-party-700' },
     { label: 'Publicar Aviso', href: '/admin/avisos?new=1', icon: Megaphone, color: 'bg-yellow-600 hover:bg-yellow-700' },
     { label: 'Adicionar Foto', href: '/admin/galeria?new=1', icon: ImagePlus, color: 'bg-gray-600 hover:bg-gray-700' },
   ];

@@ -7,7 +7,6 @@ const quickLinks = [
   { href: '/aluguel', label: 'Aluguel' },
   { href: '/disponibilidade', label: 'Disponibilidade' },
   { href: '/galeria', label: 'Galeria' },
-  { href: '/noticias', label: 'Notícias' },
   { href: '/avaliacoes', label: 'Avaliações' },
   { href: '/contato', label: 'Contato' },
 ];

@@ -61,7 +61,7 @@ export default async function AluguelPage() {
           </p>
 
           <p className="leading-relaxed">
-            Ao alugar o espaço, você terá acesso a toda a infraestrutura disponível, incluindo a <strong>área da piscina</strong>, <strong>churrasqueira</strong>, <strong>cozinha com Air Fry e fogão</strong>, além de <strong>banheiros</strong> e <strong>área de estar</strong>. Tudo preparado para que seu evento aconteça com conforto e segurança.
+            Ao alugar o espaço, você terá acesso a toda a infraestrutura disponível, incluindo a <strong>área da piscina</strong>, <strong>churrasqueira</strong>, <strong>cozinha com fogão, panelas e Air Fry</strong>, além de <strong>banheiros</strong> e <strong>área de estar</strong>. Tudo preparado para que seu evento aconteça com conforto e segurança.
           </p>
 
           <p className="leading-relaxed">
