@@ -2,16 +2,9 @@
 const nextConfig = {
   images: {
     formats: ['image/avif', 'image/webp'],
-    remotePatterns: [
-      { protocol: 'https', hostname: 'lh3.googleusercontent.com' },
-      { protocol: 'https', hostname: 'img.youtube.com' },
-    ],
   },
   experimental: {
     serverComponentsExternalPackages: ['@prisma/adapter-libsql', '@libsql/client'],
-  },
-  serverActions: {
-    bodySizeLimit: '50mb',
   },
   headers: async () => [
     {

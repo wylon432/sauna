@@ -1,157 +1,221 @@
 'use client';
 
+import { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
-import { useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
 import {
-  Loader2,
-  Save,
-  Settings,
-  MessageSquare,
-  Globe,
-  Percent,
-  Calendar,
+  Loader2, Settings, Save, Lock, Store, Phone, MapPin, AlertCircle, X, CheckCircle2,
 } from 'lucide-react';
 
-interface SettingsData {
-  whatsapp_main: string;
-  whatsapp_sauna: string;
-  whatsapp_rental: string;
-  whatsapp_message: string;
-  whatsapp_active: string;
-  site_name: string;
-  site_description: string;
-  pre_reservation_days: string;
-  signal_percentage: string;
-}
-
 export default function ConfiguracoesPage() {
-  const { data: session, status } = useSession();
-  const router = useRouter();
-  const [settings, setSettings] = useState<SettingsData>({
-    whatsapp_main: '',
-    whatsapp_sauna: '',
-    whatsapp_rental: '',
-    whatsapp_message: '',
-    whatsapp_active: 'true',
-    site_name: '',
-    site_description: '',
-    pre_reservation_days: '3',
-    signal_percentage: '30',
-  });
+  const { data: session } = useSession();
+  const isAdmin = (session?.user as any)?.role === 'ADMIN';
+
   const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
+
+  const [businessName, setBusinessName] = useState('');
+  const [businessPhone, setBusinessPhone] = useState('');
+  const [businessAddress, setBusinessAddress] = useState('');
+
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [savingBusiness, setSavingBusiness] = useState(false);
+  const [savingPassword, setSavingPassword] = useState(false);
+
+  const [pwErrors, setPwErrors] = useState<Record<string, string>>({});
 
   useEffect(() => {
-    if (status === 'unauthenticated') router.push('/login');
-  }, [status, router]);
-
-  useEffect(() => {
-    fetch('/api/admin/settings')
-      .then((r) => r.json())
-      .then((d) => {
-        if (d.settings) {
-          setSettings((prev) => ({ ...prev, ...d.settings }));
-        }
+    fetch('/api/settings')
+      .then((r) => r.ok ? r.json() : {})
+      .then((data: Record<string, string>) => {
+        setBusinessName(data.businessName || '');
+        setBusinessPhone(data.businessPhone || '');
+        setBusinessAddress(data.businessAddress || '');
       })
       .catch(() => {})
       .finally(() => setLoading(false));
   }, []);
 
-  const handleSave = async () => {
-    setSaving(true);
-    await fetch('/api/admin/settings', {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(settings),
-    });
-    setSaving(false);
+  const saveBusiness = async () => {
+    setSavingBusiness(true);
+    setError('');
+    setSuccess('');
+    try {
+      const res = await fetch('/api/settings', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ businessName, businessPhone, businessAddress }),
+      });
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || 'Erro ao salvar');
+      }
+      setSuccess('Dados do negócio salvos com sucesso');
+      setTimeout(() => setSuccess(''), 3000);
+    } catch (e: any) {
+      setError(e.message);
+    } finally {
+      setSavingBusiness(false);
+    }
   };
 
-  const handleChange = (key: keyof SettingsData, value: string) => {
-    setSettings((prev) => ({ ...prev, [key]: value }));
+  const savePassword = async () => {
+    const errs: Record<string, string> = {};
+    if (!currentPassword) errs.currentPassword = 'Senha atual é obrigatória';
+    if (!newPassword || newPassword.length < 6) errs.newPassword = 'Senha deve ter pelo menos 6 caracteres';
+    if (newPassword !== confirmPassword) errs.confirmPassword = 'Senhas não conferem';
+    setPwErrors(errs);
+    if (Object.keys(errs).length > 0) return;
+
+    setSavingPassword(true);
+    setError('');
+    setSuccess('');
+    try {
+      const res = await fetch('/api/settings', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ currentPassword, newPassword }),
+      });
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || 'Erro ao alterar senha');
+      }
+      setSuccess('Senha alterada com sucesso');
+      setCurrentPassword('');
+      setNewPassword('');
+      setConfirmPassword('');
+      setTimeout(() => setSuccess(''), 3000);
+    } catch (e: any) {
+      setError(e.message);
+    } finally {
+      setSavingPassword(false);
+    }
   };
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center py-20">
-        <Loader2 className="h-8 w-8 animate-spin text-sauna-600" />
+      <div className="flex h-64 items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-gold-500" />
       </div>
     );
   }
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-gray-900">Configurações</h1>
-        <button onClick={handleSave} disabled={saving} className="btn-primary">
-          <Save className="mr-2 h-4 w-4" /> {saving ? 'Salvando...' : 'Salvar'}
-        </button>
+      <div>
+        <h1 className="text-xl font-bold text-white">Configurações</h1>
+        <p className="text-sm text-dark-400">Gerencie as configurações do sistema</p>
       </div>
 
-      <div className="admin-card space-y-6">
-        <div className="flex items-center gap-2 border-b pb-3">
-          <Globe className="h-5 w-5 text-sauna-600" />
-          <h2 className="text-lg font-semibold">Site</h2>
+      {error && (
+        <div className="flex items-center gap-2 rounded-lg border border-red-600/30 bg-red-600/10 p-3 text-sm text-red-400">
+          <AlertCircle className="h-4 w-4 shrink-0" />
+          <span>{error}</span>
+          <button onClick={() => setError('')} className="ml-auto"><X className="h-4 w-4" /></button>
         </div>
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+      )}
+
+      {success && (
+        <div className="flex items-center gap-2 rounded-lg border border-green-600/30 bg-green-600/10 p-3 text-sm text-green-400">
+          <CheckCircle2 className="h-4 w-4 shrink-0" />
+          <span>{success}</span>
+        </div>
+      )}
+
+      <div className="card">
+        <div className="mb-4 flex items-center gap-2">
+          <Store className="h-4 w-4 text-gold-500" />
+          <h2 className="text-sm font-semibold text-white">Dados do Negócio</h2>
+        </div>
+        <div className="space-y-3">
           <div>
-            <label className="label">Nome do Site</label>
-            <input className="input" value={settings.site_name} onChange={(e) => handleChange('site_name', e.target.value)} />
+            <label className="label">
+              <span className="flex items-center gap-1.5"><Store className="h-3 w-3" /> Nome do Estabelecimento</span>
+            </label>
+            <input
+              type="text"
+              value={businessName}
+              onChange={(e) => setBusinessName(e.target.value)}
+              className="input"
+              placeholder="Nome do estabelecimento"
+            />
           </div>
           <div>
-            <label className="label">Descrição</label>
-            <input className="input" value={settings.site_description} onChange={(e) => handleChange('site_description', e.target.value)} />
+            <label className="label">
+              <span className="flex items-center gap-1.5"><Phone className="h-3 w-3" /> Telefone</span>
+            </label>
+            <input
+              type="text"
+              value={businessPhone}
+              onChange={(e) => setBusinessPhone(e.target.value)}
+              className="input"
+              placeholder="(00) 00000-0000"
+            />
           </div>
+          <div>
+            <label className="label">
+              <span className="flex items-center gap-1.5"><MapPin className="h-3 w-3" /> Endereço</span>
+            </label>
+            <input
+              type="text"
+              value={businessAddress}
+              onChange={(e) => setBusinessAddress(e.target.value)}
+              className="input"
+              placeholder="Endereço completo"
+            />
+          </div>
+          <button onClick={saveBusiness} disabled={savingBusiness} className="btn-gold">
+            {savingBusiness ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+            Salvar Dados
+          </button>
         </div>
       </div>
 
-      <div className="admin-card space-y-6">
-        <div className="flex items-center gap-2 border-b pb-3">
-          <MessageSquare className="h-5 w-5 text-green-600" />
-          <h2 className="text-lg font-semibold">WhatsApp</h2>
+      <div className="card">
+        <div className="mb-4 flex items-center gap-2">
+          <Lock className="h-4 w-4 text-gold-500" />
+          <h2 className="text-sm font-semibold text-white">Alterar Senha</h2>
         </div>
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <div className="space-y-3">
           <div>
-            <label className="label">Número Principal</label>
-            <input className="input" placeholder="11999999999" value={settings.whatsapp_main} onChange={(e) => handleChange('whatsapp_main', e.target.value)} />
-          </div>
-          <div>
-            <label className="label">Número Sauna</label>
-            <input className="input" placeholder="11999999999" value={settings.whatsapp_sauna} onChange={(e) => handleChange('whatsapp_sauna', e.target.value)} />
-          </div>
-          <div>
-            <label className="label">Número Aluguel</label>
-            <input className="input" placeholder="11999999999" value={settings.whatsapp_rental} onChange={(e) => handleChange('whatsapp_rental', e.target.value)} />
-          </div>
-          <div>
-            <label className="label">WhatsApp Ativo</label>
-            <select className="input" value={settings.whatsapp_active} onChange={(e) => handleChange('whatsapp_active', e.target.value)}>
-              <option value="true">Sim</option>
-              <option value="false">Não</option>
-            </select>
-          </div>
-          <div className="sm:col-span-2">
-            <label className="label">Mensagem Padrão</label>
-            <textarea className="input" rows={4} value={settings.whatsapp_message} onChange={(e) => handleChange('whatsapp_message', e.target.value)} placeholder="Use {name}, {date}, {service} como variáveis" />
-          </div>
-        </div>
-      </div>
-
-      <div className="admin-card space-y-6">
-        <div className="flex items-center gap-2 border-b pb-3">
-          <Settings className="h-5 w-5 text-pool-600" />
-          <h2 className="text-lg font-semibold">Reservas</h2>
-        </div>
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <div>
-            <label className="label">Dias para Pré-Reserva</label>
-            <input className="input" type="number" min="1" value={settings.pre_reservation_days} onChange={(e) => handleChange('pre_reservation_days', e.target.value)} />
+            <label className="label">Senha Atual</label>
+            <input
+              type="password"
+              value={currentPassword}
+              onChange={(e) => setCurrentPassword(e.target.value)}
+              className={`input ${pwErrors.currentPassword ? 'border-red-600' : ''}`}
+              placeholder="••••••••"
+            />
+            {pwErrors.currentPassword && <p className="mt-1 text-xs text-red-400">{pwErrors.currentPassword}</p>}
           </div>
           <div>
-            <label className="label">Porcentagem do Sinal (%)</label>
-            <input className="input" type="number" min="0" max="100" value={settings.signal_percentage} onChange={(e) => handleChange('signal_percentage', e.target.value)} />
+            <label className="label">Nova Senha</label>
+            <input
+              type="password"
+              value={newPassword}
+              onChange={(e) => setNewPassword(e.target.value)}
+              className={`input ${pwErrors.newPassword ? 'border-red-600' : ''}`}
+              placeholder="••••••••"
+            />
+            {pwErrors.newPassword && <p className="mt-1 text-xs text-red-400">{pwErrors.newPassword}</p>}
           </div>
+          <div>
+            <label className="label">Confirmar Nova Senha</label>
+            <input
+              type="password"
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+              className={`input ${pwErrors.confirmPassword ? 'border-red-600' : ''}`}
+              placeholder="••••••••"
+            />
+            {pwErrors.confirmPassword && <p className="mt-1 text-xs text-red-400">{pwErrors.confirmPassword}</p>}
+          </div>
+          <button onClick={savePassword} disabled={savingPassword} className="btn-gold">
+            {savingPassword ? <Loader2 className="h-4 w-4 animate-spin" /> : <Lock className="h-4 w-4" />}
+            Alterar Senha
+          </button>
         </div>
       </div>
     </div>

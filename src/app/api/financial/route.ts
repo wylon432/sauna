@@ -1,109 +1,94 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import prisma from '@/lib/prisma';
 
-export async function GET(request: NextRequest) {
+function getDateRange(period: string, customStart?: string, customEnd?: string): { start: Date; end: Date } {
+  const now = new Date();
+  let start: Date;
+  const end = new Date(now);
+
+  switch (period) {
+    case 'today':
+      start = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      break;
+    case 'week':
+      start = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 7);
+      break;
+    case 'month':
+      start = new Date(now.getFullYear(), now.getMonth(), 1);
+      break;
+    case 'year':
+      start = new Date(now.getFullYear(), 0, 1);
+      break;
+    case 'custom':
+      start = customStart ? new Date(customStart) : new Date(now.getFullYear(), now.getMonth(), 1);
+      if (customEnd) {
+        const customEndDate = new Date(customEnd);
+        customEndDate.setHours(23, 59, 59, 999);
+        end.setTime(customEndDate.getTime());
+      }
+      break;
+    default:
+      start = new Date(now.getFullYear(), now.getMonth(), 1);
+  }
+
+  return { start, end };
+}
+
+export async function GET(req: Request) {
   try {
     const session = await getServerSession(authOptions);
     if (!session?.user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
     }
 
-    const isAdmin = (session.user as any).role === 'ADMIN';
-    if (!isAdmin) {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-    }
+    const { searchParams } = new URL(req.url);
+    const period = searchParams.get('period') || 'month';
+    const startDate = searchParams.get('startDate') || undefined;
+    const endDate = searchParams.get('endDate') || undefined;
 
-    const { searchParams } = new URL(request.url);
-    const startDate = searchParams.get('startDate');
-    const endDate = searchParams.get('endDate');
+    const { start, end } = getDateRange(period, startDate, endDate);
 
-    const dateFilter: any = {};
-    if (startDate) {
-      dateFilter.gte = new Date(startDate);
-    }
-    if (endDate) {
-      const end = new Date(endDate);
-      end.setHours(23, 59, 59, 999);
-      dateFilter.lte = end;
-    }
+    const [orders, expenses] = await Promise.all([
+      prisma.order.findMany({
+        where: {
+          status: { in: ['PAGA', 'FECHADA'] },
+          closedAt: { gte: start, lte: end },
+        },
+        include: { items: true },
+      }),
+      prisma.expense.findMany({
+        where: {
+          date: { gte: start, lte: end },
+        },
+      }),
+    ]);
 
-    const payments = await prisma.payment.findMany({
-      where: {
-        status: 'RECEIVED',
-        ...(Object.keys(dateFilter).length > 0 ? { createdAt: dateFilter } : {}),
-      },
-    });
+    const totalRevenue = orders.reduce((sum, order) => sum + order.total, 0);
 
-    const expenses = await prisma.expense.findMany({
-      where: {
-        ...(Object.keys(dateFilter).length > 0 ? { date: dateFilter } : {}),
-      },
-    });
+    const totalCosts = orders.reduce((sum, order) => {
+      return sum + order.items.reduce((itemSum, item) => itemSum + item.costPrice * item.quantity, 0);
+    }, 0);
 
-    const totalReceived = payments.reduce((sum, p) => sum + p.amount, 0);
-    const totalExpenses = expenses.reduce((sum, e) => sum + e.amount, 0);
-    const balance = totalReceived - totalExpenses;
+    const totalExpenses = expenses.reduce((sum, expense) => sum + expense.amount, 0);
 
-    const byType: Record<string, number> = {};
-    payments.forEach(p => {
-      byType[p.type] = (byType[p.type] || 0) + p.amount;
-    });
-
-    const byMethod: Record<string, number> = {};
-    payments.forEach(p => {
-      byMethod[p.method] = (byMethod[p.method] || 0) + p.amount;
-    });
-
-    const byCategory: Record<string, number> = {};
-    expenses.forEach(e => {
-      byCategory[e.category] = (byCategory[e.category] || 0) + e.amount;
-    });
-
-    const now = new Date();
-    const monthlyData = [];
-
-    for (let i = 0; i < 12; i++) {
-      const monthDate = new Date(now.getFullYear(), now.getMonth() - i, 1);
-      const monthEnd = new Date(now.getFullYear(), now.getMonth() - i + 1, 0, 23, 59, 59, 999);
-
-      const monthPayments = payments.filter(p => {
-        const d = new Date(p.createdAt);
-        return d >= monthDate && d <= monthEnd;
-      });
-      const monthExpenses = expenses.filter(e => {
-        const d = new Date(e.date);
-        return d >= monthDate && d <= monthEnd;
-      });
-
-      monthlyData.push({
-        month: monthDate.toISOString().slice(0, 7),
-        received: monthPayments.reduce((sum, p) => sum + p.amount, 0),
-        expenses: monthExpenses.reduce((sum, e) => sum + e.amount, 0),
-        balance: monthPayments.reduce((sum, p) => sum + p.amount, 0) - monthExpenses.reduce((sum, e) => sum + e.amount, 0),
-      });
-    }
-
-    const pendingPayments = await prisma.payment.findMany({
-      where: { status: 'PENDING' },
-    });
-    const totalPending = pendingPayments.reduce((sum, p) => sum + p.amount, 0);
+    const grossProfit = totalRevenue - totalCosts;
+    const netProfit = grossProfit - totalExpenses;
 
     return NextResponse.json({
-      totalReceived,
+      period,
+      start: start.toISOString(),
+      end: end.toISOString(),
+      totalRevenue,
+      totalCosts,
       totalExpenses,
-      totalPending,
-      balance,
-      byType,
-      byMethod,
-      byCategory,
-      monthlyData,
-      paymentCount: payments.length,
+      grossProfit,
+      netProfit,
+      orderCount: orders.length,
       expenseCount: expenses.length,
     });
-  } catch (error) {
-    console.error('Error fetching financial summary:', error);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+  } catch {
+    return NextResponse.json({ error: 'Erro ao processar solicitação' }, { status: 500 });
   }
 }

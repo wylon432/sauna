@@ -1,68 +1,110 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import prisma from '@/lib/prisma';
+import { z } from 'zod';
 
-export async function POST(request: NextRequest) {
+const adjustmentSchema = z.object({
+  productId: z.string().min(1, 'Produto é obrigatório'),
+  quantity: z.number().int(),
+  notes: z.string().optional().nullable(),
+});
+
+async function logAudit(userId: string, action: string, resource: string, resourceId?: string, details?: string) {
+  await prisma.auditLog.create({ data: { userId, action, resource, resourceId, details } });
+}
+
+export async function GET(req: Request) {
   try {
     const session = await getServerSession(authOptions);
     if (!session?.user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
     }
 
-    const userId = (session.user as any).id as string;
-    const body = await request.json();
-    const { beverageId, type, quantity, reason } = body;
+    const { searchParams } = new URL(req.url);
+    const productId = searchParams.get('productId') || '';
 
-    if (!beverageId || !type || quantity === undefined) {
-      return NextResponse.json({ error: 'beverageId, type, and quantity are required' }, { status: 400 });
+    const where: any = {};
+
+    if (productId) {
+      where.productId = productId;
     }
 
-    if (!['ADD', 'REMOVE', 'ADJUST'].includes(type)) {
-      return NextResponse.json({ error: 'type must be ADD, REMOVE, or ADJUST' }, { status: 400 });
+    const movements = await prisma.inventoryMovement.findMany({
+      where,
+      include: {
+        product: { select: { id: true, name: true, unit: true } },
+        user: { select: { id: true, name: true } },
+      },
+      orderBy: { createdAt: 'desc' },
+      take: 200,
+    });
+
+    return NextResponse.json(movements);
+  } catch {
+    return NextResponse.json({ error: 'Erro ao processar solicitação' }, { status: 500 });
+  }
+}
+
+export async function POST(req: Request) {
+  try {
+    const session = await getServerSession(authOptions);
+    if (!session?.user) {
+      return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
     }
 
-    const beverage = await prisma.beverage.findUnique({ where: { id: beverageId } });
-    if (!beverage) {
-      return NextResponse.json({ error: 'Beverage not found' }, { status: 404 });
+    if ((session.user as any).role !== 'ADMIN') {
+      return NextResponse.json({ error: 'Acesso negado' }, { status: 403 });
     }
 
-    const qty = Number(quantity);
-    let newStock = beverage.currentStock;
-
-    if (type === 'ADD') {
-      newStock = beverage.currentStock + qty;
-    } else if (type === 'REMOVE') {
-      if (qty > beverage.currentStock) {
-        return NextResponse.json({ error: `Insufficient stock. Current: ${beverage.currentStock}, requested: ${qty}` }, { status: 400 });
-      }
-      newStock = beverage.currentStock - qty;
-    } else if (type === 'ADJUST') {
-      if (qty < 0) {
-        return NextResponse.json({ error: 'Adjustment quantity cannot result in negative stock' }, { status: 400 });
-      }
-      newStock = qty;
+    const body = await req.json();
+    const parsed = adjustmentSchema.safeParse(body);
+    if (!parsed.success) {
+      return NextResponse.json({ error: parsed.error.errors[0].message }, { status: 400 });
     }
 
-    const [movement] = await prisma.$transaction([
-      prisma.inventoryMovement.create({
-        data: {
-          beverageId,
-          type,
-          quantity: qty,
-          reason: reason || null,
-          performedBy: userId,
-        },
-      }),
-      prisma.beverage.update({
-        where: { id: beverageId },
-        data: { currentStock: newStock },
-      }),
-    ]);
+    const { productId, quantity, notes } = parsed.data;
+
+    const product = await prisma.product.findUnique({ where: { id: productId } });
+    if (!product) {
+      return NextResponse.json({ error: 'Produto não encontrado' }, { status: 404 });
+    }
+
+    const newStock = product.stock + quantity;
+    if (newStock < 0) {
+      return NextResponse.json({ error: 'Estoque não pode ficar negativo' }, { status: 400 });
+    }
+
+    await prisma.product.update({
+      where: { id: productId },
+      data: { stock: newStock },
+    });
+
+    const movement = await prisma.inventoryMovement.create({
+      data: {
+        productId,
+        type: 'AJUSTE',
+        quantity,
+        reference: 'Ajuste manual',
+        notes: notes?.trim() || null,
+        userId: (session.user as any).id,
+      },
+      include: {
+        product: { select: { id: true, name: true, unit: true } },
+        user: { select: { id: true, name: true } },
+      },
+    });
+
+    await logAudit(
+      (session.user as any).id,
+      'CREATE',
+      'INVENTORY_MOVEMENT',
+      movement.id,
+      `Ajuste manual: ${product.name} - Quantidade: ${quantity > 0 ? '+' : ''}${quantity}`
+    );
 
     return NextResponse.json(movement, { status: 201 });
-  } catch (error) {
-    console.error('Error registering inventory movement:', error);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+  } catch {
+    return NextResponse.json({ error: 'Erro ao processar solicitação' }, { status: 500 });
   }
 }

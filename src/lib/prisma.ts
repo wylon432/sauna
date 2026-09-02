@@ -4,7 +4,6 @@ const globalForPrisma = globalThis as unknown as { prisma: PrismaClient };
 
 function createPrismaClient() {
   const databaseUrl = process.env.DATABASE_URL || 'file:./prisma/dev.db';
-
   const { PrismaLibSql } = require('@prisma/adapter-libsql');
   const adapter = new PrismaLibSql({
     url: databaseUrl,
@@ -14,7 +13,5 @@ function createPrismaClient() {
 }
 
 export const prisma = globalForPrisma.prisma || createPrismaClient();
-
 if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = prisma;
-
 export default prisma;

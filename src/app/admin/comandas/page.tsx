@@ -1,418 +1,888 @@
 'use client';
 
-import { useSession } from 'next-auth/react';
-import { useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
+import { formatCurrency, formatDateTime, timeAgo, PAYMENT_METHODS, ORDER_STATUSES } from '@/lib/utils';
 import {
-  Loader2, Plus, Trash2, CheckCircle, XCircle, Clock, Receipt,
-  Wine, Flame, User, Phone, Search, X, AlertTriangle,
+  Loader2, Plus, ShoppingCart, X, Search, Trash2, CreditCard, Package,
+  CheckCircle2, XCircle, ChevronDown, ChevronUp, Clock, User, FileText,
+  AlertCircle, Minus, StickyNote,
 } from 'lucide-react';
 
-interface ComandaItem {
+interface Order {
   id: string;
-  comandaId: string;
-  type: string;
-  name: string;
+  orderNumber: number;
+  status: string;
+  subtotal: number;
+  discount: number;
+  addition: number;
+  total: number;
+  notes: string | null;
+  createdAt: string;
+  closedAt: string | null;
+  customer: { id: string; name: string } | null;
+  user: { id: string; name: string };
+  items: OrderItem[];
+  payments: Payment[];
+  manualCharges: ManualCharge[];
+}
+
+interface OrderItem {
+  id: string;
+  productId: string;
   quantity: number;
   unitPrice: number;
   total: number;
-  beverageId: string | null;
-  createdAt: string;
+  product: { id: string; name: string; unit: string };
 }
 
-interface Comanda {
+interface Payment {
   id: string;
-  clientName: string | null;
-  clientPhone: string | null;
-  saunaEntry: number;
-  beveragesTotal: number;
-  total: number;
-  status: string;
-  openedAt: string;
-  closedAt: string | null;
-  closedBy: string | null;
-  paymentMethod: string | null;
+  method: string;
+  amount: number;
   notes: string | null;
   createdAt: string;
-  updatedAt: string;
 }
 
-interface Beverage {
+interface ManualCharge {
+  id: string;
+  description: string;
+  quantity: number;
+  unitPrice: number;
+  total: number;
+  createdAt: string;
+}
+
+interface Product {
   id: string;
   name: string;
   price: number;
-  currentStock: number;
-  category: string;
+  stock: number;
+  unit: string;
+  code: string | null;
 }
 
+const STATUS_STYLE: Record<string, string> = {
+  ABERTA: 'badge-blue',
+  PENDENTE: 'badge-yellow',
+  PAGA: 'badge-green',
+  FECHADA: 'badge-green',
+  CANCELADA: 'badge-red',
+};
+
 export default function ComandasPage() {
-  const { data: session, status } = useSession();
-  const router = useRouter();
-  const [comandas, setComandas] = useState<Comanda[]>([]);
+  const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
-  const [showNewForm, setShowNewForm] = useState(false);
-  const [newClient, setNewClient] = useState({ name: '', phone: '' });
-  const [selectedComanda, setSelectedComanda] = useState<Comanda | null>(null);
-  const [items, setItems] = useState<ComandaItem[]>([]);
-  const [loadingItems, setLoadingItems] = useState(false);
-  const [beverages, setBeverages] = useState<Beverage[]>([]);
-  const [showAddBeverage, setShowAddBeverage] = useState(false);
-  const [addBeverageForm, setAddBeverageForm] = useState({ beverageId: '', quantity: 1 });
-  const [filter, setFilter] = useState<'ALL' | 'OPEN' | 'CLOSED'>('ALL');
+  const [error, setError] = useState('');
+  const [statusFilter, setStatusFilter] = useState('');
+  const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
+  const [loadingDetail, setLoadingDetail] = useState(false);
+  const [creating, setCreating] = useState(false);
 
-  useEffect(() => {
-    if (status === 'unauthenticated') router.push('/login');
-  }, [status, router]);
+  const [showAddItem, setShowAddItem] = useState(false);
+  const [showAddPayment, setShowAddPayment] = useState(false);
+  const [showAddCharge, setShowAddCharge] = useState(false);
 
-  const fetchComandas = () => {
-    fetch('/api/admin/comandas')
-      .then((r) => r.json())
-      .then((d) => setComandas(d.comandas || []))
-      .catch(() => {})
-      .finally(() => setLoading(false));
-  };
+  const [products, setProducts] = useState<Product[]>([]);
+  const [productSearch, setProductSearch] = useState('');
+  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+  const [addQty, setAddQty] = useState(1);
+  const [addingItem, setAddingItem] = useState(false);
 
-  const fetchBeverages = () => {
-    fetch('/api/admin/beverages')
-      .then((r) => r.json())
-      .then((d) => setBeverages((d.beverages || []).filter((b: Beverage) => b.currentStock > 0 && !b.name.includes('Entrada Sauna'))))
-      .catch(() => {});
-  };
+  const [payMethod, setPayMethod] = useState('PIX');
+  const [payAmount, setPayAmount] = useState('');
+  const [payNotes, setPayNotes] = useState('');
+  const [addingPayment, setAddingPayment] = useState(false);
 
-  const fetchItems = async (comandaId: string) => {
-    setLoadingItems(true);
+  const [chargeDesc, setChargeDesc] = useState('');
+  const [chargeQty, setChargeQty] = useState(1);
+  const [chargePrice, setChargePrice] = useState('');
+  const [addingCharge, setAddingCharge] = useState(false);
+
+  const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({
+    items: true,
+    charges: true,
+    payments: true,
+    totals: true,
+  });
+
+  const fetchOrders = useCallback(async () => {
     try {
-      const res = await fetch(`/api/admin/comandas/${comandaId}`);
+      const url = statusFilter ? `/api/orders?status=${statusFilter}` : '/api/orders';
+      const res = await fetch(url);
+      if (!res.ok) throw new Error('Erro ao carregar comandas');
       const data = await res.json();
-      setSelectedComanda(data.comanda);
-      setItems(data.items || []);
-    } catch {}
-    setLoadingItems(false);
-  };
+      setOrders(data);
+    } catch (e: any) {
+      setError(e.message);
+    } finally {
+      setLoading(false);
+    }
+  }, [statusFilter]);
 
-  useEffect(() => { fetchComandas(); fetchBeverages(); }, []);
+  useEffect(() => { fetchOrders(); }, [fetchOrders]);
 
-  const handleOpenComanda = async () => {
-    const res = await fetch('/api/admin/comandas', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ clientName: newClient.name, clientPhone: newClient.phone }),
-    });
-    const data = await res.json();
-    setShowNewForm(false);
-    setNewClient({ name: '', phone: '' });
-    fetchComandas();
-    if (data.comanda) {
-      fetchItems(data.comanda.id);
+  const fetchOrderDetail = async (id: string) => {
+    setLoadingDetail(true);
+    try {
+      const res = await fetch(`/api/orders/${id}`);
+      if (!res.ok) throw new Error('Erro ao carregar detalhes');
+      const data = await res.json();
+      setSelectedOrder(data);
+    } catch (e: any) {
+      setError(e.message);
+    } finally {
+      setLoadingDetail(false);
     }
   };
 
-  const handleAddSaunaEntry = async (comandaId: string) => {
-    await fetch('/api/admin/comandas/items', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        comandaId,
-        type: 'SAUNA',
-        name: 'Entrada Sauna',
-        quantity: 1,
-        unitPrice: 20,
-        beverageId: null,
-      }),
-    });
-    fetchItems(comandaId);
-    fetchComandas();
-  };
-
-  const handleAddBeverage = async () => {
-    if (!selectedComanda || !addBeverageForm.beverageId) return;
-    const bev = beverages.find((b) => b.id === addBeverageForm.beverageId);
-    if (!bev) return;
-
-    await fetch('/api/admin/comandas/items', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        comandaId: selectedComanda.id,
-        type: 'BEVERAGE',
-        name: bev.name,
-        quantity: addBeverageForm.quantity,
-        unitPrice: bev.price,
-        beverageId: bev.id,
-      }),
-    });
-    setShowAddBeverage(false);
-    setAddBeverageForm({ beverageId: '', quantity: 1 });
-    fetchItems(selectedComanda.id);
-    fetchBeverages();
-    fetchComandas();
-  };
-
-  const handleRemoveItem = async (itemId: string) => {
-    if (!selectedComanda) return;
-    await fetch(`/api/admin/comandas/items?itemId=${itemId}`, { method: 'DELETE' });
-    fetchItems(selectedComanda.id);
-    fetchBeverages();
-    fetchComandas();
-  };
-
-  const handleCloseComanda = async (comandaId: string) => {
-    await fetch(`/api/admin/comandas/${comandaId}`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'close', paymentMethod: 'DINHEIRO' }),
-    });
-    setSelectedComanda(null);
-    setItems([]);
-    fetchComandas();
-  };
-
-  const handleCancelComanda = async (comandaId: string) => {
-    if (!confirm('Cancelar esta comanda?')) return;
-    await fetch(`/api/admin/comandas/${comandaId}`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'cancel' }),
-    });
-    setSelectedComanda(null);
-    setItems([]);
-    fetchComandas();
-  };
-
-  const filteredComandas = comandas.filter((c) => filter === 'ALL' || c.status === filter);
-
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'OPEN': return 'bg-green-100 text-green-700';
-      case 'CLOSED': return 'bg-dark-100 text-dark-600';
-      case 'CANCELLED': return 'bg-red-100 text-red-600';
-      default: return 'bg-dark-100 text-dark-500';
+  const createOrder = async () => {
+    setCreating(true);
+    try {
+      const res = await fetch('/api/orders', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({}),
+      });
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || 'Erro ao criar comanda');
+      }
+      const order = await res.json();
+      fetchOrders();
+      fetchOrderDetail(order.id);
+    } catch (e: any) {
+      setError(e.message);
+    } finally {
+      setCreating(false);
     }
   };
 
-  const getStatusLabel = (status: string) => {
-    switch (status) {
-      case 'OPEN': return 'Aberta';
-      case 'CLOSED': return 'Fechada';
-      case 'CANCELLED': return 'Cancelada';
-      default: return status;
+  const loadProducts = async () => {
+    try {
+      const res = await fetch('/api/products?active=true');
+      if (!res.ok) throw new Error('Erro ao carregar produtos');
+      const data = await res.json();
+      setProducts(data);
+    } catch { }
+  };
+
+  const addItem = async () => {
+    if (!selectedOrder || !selectedProduct) return;
+    setAddingItem(true);
+    try {
+      const res = await fetch(`/api/orders/${selectedOrder.id}/items`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ productId: selectedProduct.id, quantity: addQty }),
+      });
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || 'Erro ao adicionar item');
+      }
+      await fetchOrderDetail(selectedOrder.id);
+      setShowAddItem(false);
+      setSelectedProduct(null);
+      setProductSearch('');
+      setAddQty(1);
+    } catch (e: any) {
+      setError(e.message);
+    } finally {
+      setAddingItem(false);
     }
   };
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center py-20">
-        <Loader2 className="h-8 w-8 animate-spin text-brand-600" />
-      </div>
-    );
-  }
+  const removeItem = async (itemId: string) => {
+    if (!selectedOrder) return;
+    if (!window.confirm('Remover este item?')) return;
+    try {
+      const res = await fetch(`/api/orders/${selectedOrder.id}/items`, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ itemId }),
+      });
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || 'Erro ao remover item');
+      }
+      await fetchOrderDetail(selectedOrder.id);
+    } catch (e: any) {
+      setError(e.message);
+    }
+  };
+
+  const addPayment = async () => {
+    if (!selectedOrder) return;
+    const amount = Math.round(parseFloat(payAmount.replace(',', '.')) * 100);
+    if (!amount || amount <= 0) {
+      setError('Informe um valor válido');
+      return;
+    }
+    setAddingPayment(true);
+    try {
+      const res = await fetch(`/api/orders/${selectedOrder.id}/payments`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ method: payMethod, amount, notes: payNotes || null }),
+      });
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || 'Erro ao adicionar pagamento');
+      }
+      await fetchOrderDetail(selectedOrder.id);
+      setShowAddPayment(false);
+      setPayAmount('');
+      setPayNotes('');
+      setPayMethod('PIX');
+      fetchOrders();
+    } catch (e: any) {
+      setError(e.message);
+    } finally {
+      setAddingPayment(false);
+    }
+  };
+
+  const addCharge = async () => {
+    if (!selectedOrder) return;
+    if (!chargeDesc.trim()) {
+      setError('Informe a descrição do encargo');
+      return;
+    }
+    const unitPrice = Math.round(parseFloat(chargePrice.replace(',', '.')) * 100);
+    if (!unitPrice || unitPrice <= 0) {
+      setError('Informe um valor válido');
+      return;
+    }
+    setAddingCharge(true);
+    try {
+      const res = await fetch(`/api/orders/${selectedOrder.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          notes: selectedOrder.notes
+            ? `${selectedOrder.notes}\n[ENCARGO] ${chargeDesc.trim()} x${chargeQty} @ ${formatCurrency(unitPrice)}`
+            : `[ENCARGO] ${chargeDesc.trim()} x${chargeQty} @ ${formatCurrency(unitPrice)}`,
+        }),
+      });
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || 'Erro ao adicionar encargo');
+      }
+      await fetchOrderDetail(selectedOrder.id);
+      setShowAddCharge(false);
+      setChargeDesc('');
+      setChargeQty(1);
+      setChargePrice('');
+    } catch (e: any) {
+      setError(e.message);
+    } finally {
+      setAddingCharge(false);
+    }
+  };
+
+  const closeOrder = async () => {
+    if (!selectedOrder) return;
+    if (!window.confirm('Fechar esta comanda?')) return;
+    try {
+      const res = await fetch(`/api/orders/${selectedOrder.id}/close`, {
+        method: 'POST',
+      });
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || 'Erro ao fechar comanda');
+      }
+      await fetchOrderDetail(selectedOrder.id);
+      fetchOrders();
+    } catch (e: any) {
+      setError(e.message);
+    }
+  };
+
+  const cancelOrder = async () => {
+    if (!selectedOrder) return;
+    if (!window.confirm('Cancelar esta comanda? Itens serão devolvidos ao estoque.')) return;
+    try {
+      const res = await fetch(`/api/orders/${selectedOrder.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: 'CANCELADA' }),
+      });
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || 'Erro ao cancelar comanda');
+      }
+      await fetchOrderDetail(selectedOrder.id);
+      fetchOrders();
+    } catch (e: any) {
+      setError(e.message);
+    }
+  };
+
+  const totalPaid = selectedOrder
+    ? selectedOrder.payments.reduce((sum, p) => sum + p.amount, 0)
+    : 0;
+  const remaining = selectedOrder ? selectedOrder.total - totalPaid : 0;
+  const canClose = selectedOrder && selectedOrder.items.length > 0 && remaining <= 0 && !['FECHADA', 'CANCELADA'].includes(selectedOrder.status);
+  const isOpen = selectedOrder && !['FECHADA', 'CANCELADA'].includes(selectedOrder.status);
+
+  const filteredProducts = products.filter(
+    (p) =>
+      p.name.toLowerCase().includes(productSearch.toLowerCase()) ||
+      (p.code && p.code.toLowerCase().includes(productSearch.toLowerCase()))
+  );
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="space-y-4">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-extrabold text-dark-900">Comandas</h1>
-          <p className="text-sm text-dark-500">Gerencie as comandas dos clientes na sauna</p>
+          <h1 className="text-xl font-bold text-white">Comandas</h1>
+          <p className="text-sm text-dark-400">{orders.length} comanda(s)</p>
         </div>
-        <button onClick={() => { setShowNewForm(true); fetchBeverages(); }} className="btn-primary">
-          <Plus className="mr-2 h-4 w-4" /> Nova Comanda
+        <button onClick={createOrder} disabled={creating} className="btn-gold">
+          {creating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
+          NOVA COMANDA
         </button>
       </div>
 
-      {/* New Comanda Form */}
-      {showNewForm && (
-        <div className="admin-card space-y-4">
-          <div className="flex items-center justify-between">
-            <h3 className="font-extrabold text-dark-900">Abrir Nova Comanda</h3>
-            <button onClick={() => setShowNewForm(false)} className="text-dark-400 hover:text-dark-600"><X className="h-5 w-5" /></button>
-          </div>
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <div>
-              <label className="label">Nome do Cliente</label>
-              <input className="input" value={newClient.name} onChange={(e) => setNewClient({ ...newClient, name: e.target.value })} placeholder="Nome (opcional)" />
-            </div>
-            <div>
-              <label className="label">Telefone</label>
-              <input className="input" value={newClient.phone} onChange={(e) => setNewClient({ ...newClient, phone: e.target.value })} placeholder="(00) 00000-0000 (opcional)" />
-            </div>
-          </div>
-          <button onClick={handleOpenComanda} className="btn-primary">
-            <CheckCircle className="mr-2 h-4 w-4" /> Abrir Comanda (R$ 20,00 entrada)
+      {error && (
+        <div className="flex items-center gap-2 rounded-lg border border-red-600/30 bg-red-600/10 p-3 text-sm text-red-400">
+          <AlertCircle className="h-4 w-4 shrink-0" />
+          <span>{error}</span>
+          <button onClick={() => setError('')} className="ml-auto">
+            <X className="h-4 w-4" />
           </button>
         </div>
       )}
 
-      {/* Filter Tabs */}
-      <div className="flex gap-2">
-        {(['ALL', 'OPEN', 'CLOSED'] as const).map((f) => (
-          <button key={f} onClick={() => setFilter(f)}
-            className={`rounded-lg px-4 py-2 text-sm font-semibold transition-colors ${
-              filter === f ? 'bg-brand-600 text-white' : 'bg-dark-100 text-dark-600 hover:bg-dark-200'
-            }`}>
-            {f === 'ALL' ? 'Todas' : f === 'OPEN' ? 'Abertas' : 'Fechadas'}
+      <div className="flex gap-2 overflow-x-auto pb-1">
+        <button
+          onClick={() => setStatusFilter('')}
+          className={`whitespace-nowrap rounded-lg px-3 py-1.5 text-xs font-medium transition-colors ${
+            statusFilter === '' ? 'bg-gold-600 text-dark-950' : 'bg-dark-800 text-dark-300 hover:text-white'
+          }`}
+        >
+          Todas
+        </button>
+        {ORDER_STATUSES.map((s) => (
+          <button
+            key={s}
+            onClick={() => setStatusFilter(s)}
+            className={`whitespace-nowrap rounded-lg px-3 py-1.5 text-xs font-medium transition-colors ${
+              statusFilter === s ? 'bg-gold-600 text-dark-950' : 'bg-dark-800 text-dark-300 hover:text-white'
+            }`}
+          >
+            {s}
           </button>
         ))}
       </div>
 
-      <div className="flex flex-col gap-6 lg:flex-row">
-        {/* Comandas List */}
-        <div className="lg:w-96 space-y-3">
-          {filteredComandas.length === 0 ? (
-            <div className="admin-card text-center py-12">
-              <Receipt className="mx-auto mb-3 h-10 w-10 text-dark-300" />
-              <p className="text-dark-400">Nenhuma comanda encontrada.</p>
-            </div>
-          ) : (
-            filteredComandas.map((cmd) => (
-              <div
-                key={cmd.id}
-                onClick={() => { fetchItems(cmd.id); }}
-                className={`admin-card cursor-pointer transition-all duration-200 hover:-translate-y-0.5 ${
-                  selectedComanda?.id === cmd.id ? 'ring-2 ring-brand-500 shadow-premium-lg' : 'hover:shadow-premium'
-                }`}
+      {loading ? (
+        <div className="flex h-40 items-center justify-center">
+          <Loader2 className="h-6 w-6 animate-spin text-gold-500" />
+        </div>
+      ) : orders.length === 0 ? (
+        <div className="card flex flex-col items-center py-12">
+          <ShoppingCart className="mb-3 h-10 w-10 text-dark-600" />
+          <p className="text-sm text-dark-500">Nenhuma comanda encontrada</p>
+        </div>
+      ) : (
+        <div className="space-y-2">
+          {orders.map((order) => {
+            const orderPaid = order.payments.reduce((s, p) => s + p.amount, 0);
+            return (
+              <button
+                key={order.id}
+                onClick={() => fetchOrderDetail(order.id)}
+                className="w-full rounded-xl border border-dark-800 bg-dark-900 p-4 text-left transition-colors hover:border-dark-700 hover:bg-dark-850"
               >
-                <div className="flex items-start justify-between">
+                <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-brand-100">
-                      <User className="h-5 w-5 text-brand-600" />
+                    <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-dark-800 text-sm font-bold text-gold-400">
+                      #{order.orderNumber}
                     </div>
                     <div>
-                      <p className="font-extrabold text-dark-900">{cmd.clientName || 'Cliente avulso'}</p>
-                      {cmd.clientPhone && <p className="text-xs text-dark-400">{cmd.clientPhone}</p>}
+                      <div className="flex items-center gap-2">
+                        <span className={STATUS_STYLE[order.status] || 'badge-gray'}>{order.status}</span>
+                        <span className="text-xs text-dark-500">{timeAgo(order.createdAt)}</span>
+                      </div>
+                      <div className="mt-1 flex items-center gap-2 text-sm text-dark-300">
+                        {order.customer ? (
+                          <><User className="h-3 w-3" /> {order.customer.name}</>
+                        ) : (
+                          <span className="text-dark-500">Sem cliente</span>
+                        )}
+                        <span className="text-dark-600">·</span>
+                        <span>{order.items.length} item(s)</span>
+                      </div>
                     </div>
                   </div>
-                  <span className={`rounded-full px-2.5 py-0.5 text-xs font-bold ${getStatusColor(cmd.status)}`}>
-                    {getStatusLabel(cmd.status)}
-                  </span>
+                  <div className="text-right">
+                    <p className="text-sm font-bold text-gold-400">{formatCurrency(order.total)}</p>
+                    {order.total > 0 && (
+                      <p className="text-xs text-dark-500">
+                        Pago: {formatCurrency(orderPaid)}
+                      </p>
+                    )}
+                  </div>
                 </div>
-                <div className="mt-3 flex items-center justify-between border-t border-dark-100 pt-3">
-                  <span className="text-sm text-dark-500">
-                    {new Date(cmd.openedAt).toLocaleDateString('pt-BR')} {new Date(cmd.openedAt).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
-                  </span>
-                  <span className="text-lg font-extrabold text-brand-600">
-                    R$ {Number(cmd.total).toFixed(2)}
-                  </span>
-                </div>
-              </div>
-            ))
-          )}
+              </button>
+            );
+          })}
         </div>
+      )}
 
-        {/* Selected Comanda Detail */}
-        <div className="flex-1">
-          {selectedComanda ? (
-            <div className="admin-card">
-              <div className="flex items-center justify-between border-b border-dark-100 pb-4">
-                <div>
-                  <h2 className="text-lg font-extrabold text-dark-900">{selectedComanda.clientName || 'Cliente avulso'}</h2>
-                  {selectedComanda.clientPhone && <p className="text-sm text-dark-400">{selectedComanda.clientPhone}</p>}
-                </div>
-                <span className={`rounded-full px-3 py-1 text-sm font-bold ${getStatusColor(selectedComanda.status)}`}>
-                  {getStatusLabel(selectedComanda.status)}
-                </span>
+      {selectedOrder && (
+        <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/80 p-0 pt-4 sm:p-4 sm:pt-8">
+          <div className="w-full max-w-2xl rounded-xl bg-dark-900 border border-dark-800 sm:my-8">
+            {loadingDetail ? (
+              <div className="flex h-64 items-center justify-center">
+                <Loader2 className="h-6 w-6 animate-spin text-gold-500" />
               </div>
+            ) : (
+              <>
+                <div className="flex items-center justify-between border-b border-dark-800 p-4">
+                  <div className="flex items-center gap-3">
+                    <h2 className="text-lg font-bold text-white">#{selectedOrder.orderNumber}</h2>
+                    <span className={STATUS_STYLE[selectedOrder.status] || 'badge-gray'}>
+                      {selectedOrder.status}
+                    </span>
+                  </div>
+                  <button onClick={() => setSelectedOrder(null)} className="rounded-lg p-2 text-dark-400 hover:text-white">
+                    <X className="h-5 w-5" />
+                  </button>
+                </div>
 
-              {/* Items */}
-              <div className="mt-4 space-y-2">
-                {loadingItems ? (
-                  <div className="py-8 text-center"><Loader2 className="mx-auto h-6 w-6 animate-spin text-brand-600" /></div>
-                ) : items.length === 0 ? (
-                  <div className="py-8 text-center text-dark-400">Nenhum item adicionado.</div>
-                ) : (
-                  items.map((item) => (
-                    <div key={item.id} className="flex items-center justify-between rounded-xl bg-dark-50 px-4 py-3">
-                      <div className="flex items-center gap-3">
-                        {item.type === 'SAUNA' ? (
-                          <Flame className="h-5 w-5 text-orange-500" />
-                        ) : (
-                          <Wine className="h-5 w-5 text-purple-500" />
-                        )}
-                        <div>
-                          <p className="font-semibold text-dark-900">{item.name}</p>
-                          <p className="text-xs text-dark-400">{item.quantity}x R$ {Number(item.unitPrice).toFixed(2)}</p>
-                        </div>
+                <div className="p-4 space-y-4">
+                  <div className="grid grid-cols-2 gap-3 text-sm">
+                    <div>
+                      <span className="text-dark-500">Cliente</span>
+                      <p className="font-medium text-white">{selectedOrder.customer?.name || '—'}</p>
+                    </div>
+                    <div>
+                      <span className="text-dark-500">Criada</span>
+                      <p className="font-medium text-white">{formatDateTime(selectedOrder.createdAt)}</p>
+                    </div>
+                    <div>
+                      <span className="text-dark-500">Atendente</span>
+                      <p className="font-medium text-white">{selectedOrder.user.name}</p>
+                    </div>
+                    {selectedOrder.closedAt && (
+                      <div>
+                        <span className="text-dark-500">Fechada</span>
+                        <p className="font-medium text-white">{formatDateTime(selectedOrder.closedAt)}</p>
                       </div>
-                      <div className="flex items-center gap-3">
-                        <span className="font-extrabold text-dark-900">R$ {Number(item.total).toFixed(2)}</span>
-                        {selectedComanda.status === 'OPEN' && (
-                          <button onClick={() => handleRemoveItem(item.id)} className="text-red-500 hover:text-red-700">
-                            <Trash2 className="h-4 w-4" />
+                    )}
+                  </div>
+
+                  {selectedOrder.notes && (
+                    <div className="rounded-lg bg-dark-800 p-3">
+                      <div className="flex items-center gap-1 text-xs text-dark-400 mb-1">
+                        <StickyNote className="h-3 w-3" /> Observações
+                      </div>
+                      <p className="text-sm text-dark-200 whitespace-pre-wrap">{selectedOrder.notes}</p>
+                    </div>
+                  )}
+
+                  <div className="border-t border-dark-800 pt-4">
+                    <button
+                      onClick={() => setExpandedSections((p) => ({ ...p, items: !p.items }))}
+                      className="flex w-full items-center justify-between"
+                    >
+                      <h3 className="text-sm font-semibold text-white flex items-center gap-2">
+                        <Package className="h-4 w-4 text-gold-500" />
+                        Itens ({selectedOrder.items.length})
+                      </h3>
+                      {expandedSections.items ? <ChevronUp className="h-4 w-4 text-dark-400" /> : <ChevronDown className="h-4 w-4 text-dark-400" />}
+                    </button>
+                    {expandedSections.items && (
+                      <div className="mt-3">
+                        {selectedOrder.items.length === 0 ? (
+                          <p className="py-4 text-center text-sm text-dark-500">Nenhum item</p>
+                        ) : (
+                          <div className="space-y-2">
+                            {selectedOrder.items.map((item) => (
+                              <div key={item.id} className="flex items-center justify-between rounded-lg bg-dark-800 p-3">
+                                <div className="flex-1 min-w-0">
+                                  <p className="text-sm font-medium text-white truncate">{item.product.name}</p>
+                                  <p className="text-xs text-dark-400">
+                                    {item.quantity} {item.product.unit} × {formatCurrency(item.unitPrice)}
+                                  </p>
+                                </div>
+                                <div className="flex items-center gap-2 ml-3">
+                                  <span className="text-sm font-medium text-gold-400">{formatCurrency(item.total)}</span>
+                                  {isOpen && (
+                                    <button onClick={() => removeItem(item.id)} className="rounded p-1 text-dark-500 hover:text-red-400">
+                                      <Trash2 className="h-3.5 w-3.5" />
+                                    </button>
+                                  )}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                        {isOpen && (
+                          <button onClick={() => { setShowAddItem(true); loadProducts(); }} className="btn-outline mt-3 w-full text-xs py-2">
+                            <Plus className="h-3.5 w-3.5" /> Adicionar Item
                           </button>
                         )}
                       </div>
+                    )}
+                  </div>
+
+                  {selectedOrder.manualCharges.length > 0 && (
+                    <div className="border-t border-dark-800 pt-4">
+                      <button
+                        onClick={() => setExpandedSections((p) => ({ ...p, charges: !p.charges }))}
+                        className="flex w-full items-center justify-between"
+                      >
+                        <h3 className="text-sm font-semibold text-white flex items-center gap-2">
+                          <FileText className="h-4 w-4 text-gold-500" />
+                          Encargos Manuais ({selectedOrder.manualCharges.length})
+                        </h3>
+                        {expandedSections.charges ? <ChevronUp className="h-4 w-4 text-dark-400" /> : <ChevronDown className="h-4 w-4 text-dark-400" />}
+                      </button>
+                      {expandedSections.charges && (
+                        <div className="mt-3 space-y-2">
+                          {selectedOrder.manualCharges.map((ch) => (
+                            <div key={ch.id} className="flex items-center justify-between rounded-lg bg-dark-800 p-3">
+                              <div className="flex-1 min-w-0">
+                                <p className="text-sm font-medium text-white truncate">{ch.description}</p>
+                                <p className="text-xs text-dark-400">{ch.quantity} × {formatCurrency(ch.unitPrice)}</p>
+                              </div>
+                              <span className="text-sm font-medium text-gold-400 ml-3">{formatCurrency(ch.total)}</span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
                     </div>
-                  ))
+                  )}
+
+                  {isOpen && (
+                    <button onClick={() => setShowAddCharge(true)} className="btn-outline w-full text-xs py-2">
+                      <Plus className="h-3.5 w-3.5" /> Adicionar Encargo Manual
+                    </button>
+                  )}
+
+                  <div className="border-t border-dark-800 pt-4">
+                    <button
+                      onClick={() => setExpandedSections((p) => ({ ...p, payments: !p.payments }))}
+                      className="flex w-full items-center justify-between"
+                    >
+                      <h3 className="text-sm font-semibold text-white flex items-center gap-2">
+                        <CreditCard className="h-4 w-4 text-gold-500" />
+                        Pagamentos ({selectedOrder.payments.length})
+                      </h3>
+                      {expandedSections.payments ? <ChevronUp className="h-4 w-4 text-dark-400" /> : <ChevronDown className="h-4 w-4 text-dark-400" />}
+                    </button>
+                    {expandedSections.payments && (
+                      <div className="mt-3">
+                        {selectedOrder.payments.length === 0 ? (
+                          <p className="py-4 text-center text-sm text-dark-500">Nenhum pagamento</p>
+                        ) : (
+                          <div className="space-y-2">
+                            {selectedOrder.payments.map((pay) => (
+                              <div key={pay.id} className="flex items-center justify-between rounded-lg bg-dark-800 p-3">
+                                <div>
+                                  <p className="text-sm font-medium text-white">{pay.method}</p>
+                                  {pay.notes && <p className="text-xs text-dark-400">{pay.notes}</p>}
+                                  <p className="text-xs text-dark-500">{formatDateTime(pay.createdAt)}</p>
+                                </div>
+                                <span className="text-sm font-medium text-green-400">{formatCurrency(pay.amount)}</span>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                        {isOpen && (
+                          <button onClick={() => setShowAddPayment(true)} className="btn-outline mt-3 w-full text-xs py-2">
+                            <CreditCard className="h-3.5 w-3.5" /> Adicionar Pagamento
+                          </button>
+                        )}
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="border-t border-dark-800 pt-4">
+                    <button
+                      onClick={() => setExpandedSections((p) => ({ ...p, totals: !p.totals }))}
+                      className="flex w-full items-center justify-between"
+                    >
+                      <h3 className="text-sm font-semibold text-white">Totais</h3>
+                      {expandedSections.totals ? <ChevronUp className="h-4 w-4 text-dark-400" /> : <ChevronDown className="h-4 w-4 text-dark-400" />}
+                    </button>
+                    {expandedSections.totals && (
+                      <div className="mt-3 space-y-2 rounded-lg bg-dark-800 p-3 text-sm">
+                        <div className="flex justify-between">
+                          <span className="text-dark-400">Subtotal</span>
+                          <span className="text-white">{formatCurrency(selectedOrder.subtotal)}</span>
+                        </div>
+                        {selectedOrder.discount > 0 && (
+                          <div className="flex justify-between">
+                            <span className="text-dark-400">Desconto</span>
+                            <span className="text-red-400">-{formatCurrency(selectedOrder.discount)}</span>
+                          </div>
+                        )}
+                        {selectedOrder.addition > 0 && (
+                          <div className="flex justify-between">
+                            <span className="text-dark-400">Acréscimo</span>
+                            <span className="text-green-400">+{formatCurrency(selectedOrder.addition)}</span>
+                          </div>
+                        )}
+                        <div className="flex justify-between border-t border-dark-700 pt-2">
+                          <span className="font-semibold text-white">Total</span>
+                          <span className="font-bold text-gold-400 text-base">{formatCurrency(selectedOrder.total)}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-dark-400">Pago</span>
+                          <span className="text-green-400">{formatCurrency(totalPaid)}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-dark-400">Restante</span>
+                          <span className={remaining > 0 ? 'text-red-400 font-semibold' : 'text-green-400'}>
+                            {formatCurrency(remaining)}
+                          </span>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {isOpen && (
+                  <div className="flex gap-3 border-t border-dark-800 p-4">
+                    {canClose ? (
+                      <button onClick={closeOrder} className="btn-gold flex-1">
+                        <CheckCircle2 className="h-4 w-4" /> Fechar Comanda
+                      </button>
+                    ) : (
+                      <div className="flex-1 rounded-lg border border-dark-700 bg-dark-800 p-2 text-center text-xs text-dark-500">
+                        {selectedOrder.items.length === 0 ? 'Adicione itens' : remaining > 0 ? `Restante: ${formatCurrency(remaining)}` : ''}
+                      </div>
+                    )}
+                    {selectedOrder.status !== 'CANCELADA' && (
+                      <button onClick={cancelOrder} className="btn-danger px-4">
+                        <XCircle className="h-4 w-4" /> Cancelar
+                      </button>
+                    )}
+                  </div>
                 )}
-              </div>
+              </>
+            )}
+          </div>
+        </div>
+      )}
 
-              {/* Total */}
-              <div className="mt-4 border-t border-dark-100 pt-4 space-y-2">
-                <div className="flex justify-between text-sm">
-                  <span className="text-dark-500">Entrada Sauna</span>
-                  <span className="font-semibold text-dark-700">R$ {Number(selectedComanda.saunaEntry).toFixed(2)}</span>
-                </div>
-                <div className="flex justify-between text-sm">
-                  <span className="text-dark-500">Bebidas</span>
-                  <span className="font-semibold text-dark-700">R$ {Number(selectedComanda.beveragesTotal).toFixed(2)}</span>
-                </div>
-                <div className="flex justify-between border-t border-dark-200 pt-2">
-                  <span className="text-lg font-extrabold text-dark-900">Total</span>
-                  <span className="text-xl font-extrabold text-brand-600">R$ {Number(selectedComanda.total).toFixed(2)}</span>
-                </div>
-              </div>
-
-              {/* Actions */}
-              {selectedComanda.status === 'OPEN' && (
-                <div className="mt-4 flex flex-wrap gap-2 border-t border-dark-100 pt-4">
-                  <button onClick={() => handleAddSaunaEntry(selectedComanda.id)} className="flex items-center gap-2 rounded-xl bg-orange-100 px-4 py-2.5 text-sm font-semibold text-orange-700 transition-colors hover:bg-orange-200">
-                    <Flame className="h-4 w-4" /> + Entrada Sauna (R$ 20)
-                  </button>
-                  <button onClick={() => { setShowAddBeverage(true); fetchBeverages(); }} className="flex items-center gap-2 rounded-xl bg-purple-100 px-4 py-2.5 text-sm font-semibold text-purple-700 transition-colors hover:bg-purple-200">
-                    <Wine className="h-4 w-4" /> + Bebida
-                  </button>
-                  <button onClick={() => handleCloseComanda(selectedComanda.id)} className="flex items-center gap-2 rounded-xl bg-green-600 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-green-700 ml-auto">
-                    <CheckCircle className="h-4 w-4" /> Fechar Comanda
-                  </button>
-                  <button onClick={() => handleCancelComanda(selectedComanda.id)} className="flex items-center gap-2 rounded-xl bg-red-100 px-4 py-2.5 text-sm font-semibold text-red-600 transition-colors hover:bg-red-200">
-                    <XCircle className="h-4 w-4" /> Cancelar
-                  </button>
-                </div>
+      {showAddItem && selectedOrder && (
+        <div className="fixed inset-0 z-[60] flex items-end justify-center bg-black/70 sm:items-center sm:p-4">
+          <div className="w-full max-w-md rounded-t-xl bg-dark-900 border border-dark-800 sm:rounded-xl">
+            <div className="flex items-center justify-between border-b border-dark-800 p-4">
+              <h3 className="text-sm font-semibold text-white">Adicionar Item</h3>
+              <button onClick={() => { setShowAddItem(false); setSelectedProduct(null); setProductSearch(''); }} className="rounded p-1 text-dark-400 hover:text-white">
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+            <div className="p-4 space-y-3">
+              {!selectedProduct ? (
+                <>
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-dark-500" />
+                    <input
+                      type="text"
+                      placeholder="Buscar produto..."
+                      value={productSearch}
+                      onChange={(e) => setProductSearch(e.target.value)}
+                      className="input pl-10"
+                      autoFocus
+                    />
+                  </div>
+                  <div className="max-h-60 overflow-y-auto">
+                    {filteredProducts.length === 0 ? (
+                      <p className="py-4 text-center text-sm text-dark-500">Nenhum produto encontrado</p>
+                    ) : (
+                      filteredProducts.map((p) => (
+                        <button
+                          key={p.id}
+                          onClick={() => setSelectedProduct(p)}
+                          className="flex w-full items-center justify-between rounded-lg p-3 text-left transition-colors hover:bg-dark-800"
+                        >
+                          <div>
+                            <p className="text-sm font-medium text-white">{p.name}</p>
+                            <p className="text-xs text-dark-400">
+                              {formatCurrency(p.price)} · Estoque: {p.stock} {p.unit}
+                            </p>
+                          </div>
+                          {p.code && <span className="text-xs text-dark-500">{p.code}</span>}
+                        </button>
+                      ))
+                    )}
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className="rounded-lg bg-dark-800 p-3">
+                    <p className="text-sm font-medium text-white">{selectedProduct.name}</p>
+                    <p className="text-xs text-dark-400">
+                      {formatCurrency(selectedProduct.price)} · Estoque: {selectedProduct.stock} {selectedProduct.unit}
+                    </p>
+                  </div>
+                  <div>
+                    <label className="label">Quantidade</label>
+                    <div className="flex items-center gap-3">
+                      <button
+                        onClick={() => setAddQty(Math.max(1, addQty - 1))}
+                        className="flex h-10 w-10 items-center justify-center rounded-lg bg-dark-800 text-white hover:bg-dark-700"
+                      >
+                        <Minus className="h-4 w-4" />
+                      </button>
+                      <input
+                        type="number"
+                        value={addQty}
+                        onChange={(e) => setAddQty(Math.max(1, parseInt(e.target.value) || 1))}
+                        className="input w-20 text-center"
+                        min={1}
+                      />
+                      <button
+                        onClick={() => setAddQty(addQty + 1)}
+                        className="flex h-10 w-10 items-center justify-center rounded-lg bg-dark-800 text-white hover:bg-dark-700"
+                      >
+                        <Plus className="h-4 w-4" />
+                      </button>
+                    </div>
+                  </div>
+                  <div className="rounded-lg bg-dark-800 p-3 text-sm">
+                    <div className="flex justify-between">
+                      <span className="text-dark-400">Subtotal</span>
+                      <span className="font-bold text-gold-400">
+                        {formatCurrency(selectedProduct.price * addQty)}
+                      </span>
+                    </div>
+                  </div>
+                  <div className="flex gap-3">
+                    <button onClick={() => { setSelectedProduct(null); setProductSearch(''); setAddQty(1); }} className="btn-outline flex-1">
+                      Voltar
+                    </button>
+                    <button onClick={addItem} disabled={addingItem || addQty > selectedProduct.stock} className="btn-gold flex-1">
+                      {addingItem ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
+                      Adicionar
+                    </button>
+                  </div>
+                  {addQty > selectedProduct.stock && (
+                    <p className="text-xs text-center text-red-400">Estoque insuficiente</p>
+                  )}
+                </>
               )}
             </div>
-          ) : (
-            <div className="admin-card text-center py-16">
-              <Receipt className="mx-auto mb-4 h-12 w-12 text-dark-300" />
-              <h3 className="text-lg font-extrabold text-dark-900">Selecione uma comanda</h3>
-              <p className="mt-2 text-dark-400">Clique em uma comanda na lista para ver os detalhes.</p>
-            </div>
-          )}
+          </div>
         </div>
-      </div>
+      )}
 
-      {/* Add Beverage Modal */}
-      {showAddBeverage && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={() => setShowAddBeverage(false)}>
-          <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl" onClick={(e) => e.stopPropagation()}>
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-extrabold text-dark-900">Adicionar Bebida</h3>
-              <button onClick={() => setShowAddBeverage(false)} className="text-dark-400 hover:text-dark-600"><X className="h-5 w-5" /></button>
+      {showAddPayment && selectedOrder && (
+        <div className="fixed inset-0 z-[60] flex items-end justify-center bg-black/70 sm:items-center sm:p-4">
+          <div className="w-full max-w-md rounded-t-xl bg-dark-900 border border-dark-800 sm:rounded-xl">
+            <div className="flex items-center justify-between border-b border-dark-800 p-4">
+              <h3 className="text-sm font-semibold text-white">Adicionar Pagamento</h3>
+              <button onClick={() => { setShowAddPayment(false); setPayAmount(''); setPayNotes(''); }} className="rounded p-1 text-dark-400 hover:text-white">
+                <X className="h-4 w-4" />
+              </button>
             </div>
-            <div className="space-y-4">
+            <div className="p-4 space-y-3">
               <div>
-                <label className="label">Bebida</label>
-                <select className="input" value={addBeverageForm.beverageId} onChange={(e) => setAddBeverageForm({ ...addBeverageForm, beverageId: e.target.value })}>
-                  <option value="">Selecione...</option>
-                  {beverages.map((b) => (
-                    <option key={b.id} value={b.id}>{b.name} - R$ {Number(b.price).toFixed(2)} (Estoque: {b.currentStock})</option>
+                <label className="label">Forma de Pagamento</label>
+                <select value={payMethod} onChange={(e) => setPayMethod(e.target.value)} className="select">
+                  {PAYMENT_METHODS.map((m) => (
+                    <option key={m.value} value={m.value}>{m.label}</option>
                   ))}
                 </select>
               </div>
               <div>
-                <label className="label">Quantidade</label>
-                <input className="input" type="number" min="1" value={addBeverageForm.quantity} onChange={(e) => setAddBeverageForm({ ...addBeverageForm, quantity: Number(e.target.value) })} />
+                <label className="label">Valor (R$)</label>
+                <input
+                  type="text"
+                  placeholder="0,00"
+                  value={payAmount}
+                  onChange={(e) => setPayAmount(e.target.value)}
+                  className="input"
+                  autoFocus
+                />
+                {remaining > 0 && (
+                  <button
+                    onClick={() => setPayAmount((remaining / 100).toFixed(2).replace('.', ','))}
+                    className="mt-1 text-xs text-gold-500 hover:text-gold-400"
+                  >
+                    Pagar saldo restante: {formatCurrency(remaining)}
+                  </button>
+                )}
               </div>
-              <button onClick={handleAddBeverage} disabled={!addBeverageForm.beverageId} className="btn-primary w-full disabled:opacity-50">
-                <Plus className="mr-2 h-4 w-4" /> Adicionar
+              <div>
+                <label className="label">Observações</label>
+                <input
+                  type="text"
+                  placeholder="Opcional"
+                  value={payNotes}
+                  onChange={(e) => setPayNotes(e.target.value)}
+                  className="input"
+                />
+              </div>
+              <button onClick={addPayment} disabled={addingPayment || !payAmount} className="btn-gold w-full">
+                {addingPayment ? <Loader2 className="h-4 w-4 animate-spin" /> : <CreditCard className="h-4 w-4" />}
+                Confirmar Pagamento
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showAddCharge && selectedOrder && (
+        <div className="fixed inset-0 z-[60] flex items-end justify-center bg-black/70 sm:items-center sm:p-4">
+          <div className="w-full max-w-md rounded-t-xl bg-dark-900 border border-dark-800 sm:rounded-xl">
+            <div className="flex items-center justify-between border-b border-dark-800 p-4">
+              <h3 className="text-sm font-semibold text-white">Encargo Manual</h3>
+              <button onClick={() => { setShowAddCharge(false); setChargeDesc(''); setChargePrice(''); setChargeQty(1); }} className="rounded p-1 text-dark-400 hover:text-white">
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+            <div className="p-4 space-y-3">
+              <div>
+                <label className="label">Descrição</label>
+                <input
+                  type="text"
+                  placeholder="Ex: Serviço extra, Taxa..."
+                  value={chargeDesc}
+                  onChange={(e) => setChargeDesc(e.target.value)}
+                  className="input"
+                  autoFocus
+                />
+              </div>
+              <div>
+                <label className="label">Quantidade</label>
+                <input
+                  type="number"
+                  value={chargeQty}
+                  onChange={(e) => setChargeQty(Math.max(1, parseInt(e.target.value) || 1))}
+                  className="input"
+                  min={1}
+                />
+              </div>
+              <div>
+                <label className="label">Valor Unitário (R$)</label>
+                <input
+                  type="text"
+                  placeholder="0,00"
+                  value={chargePrice}
+                  onChange={(e) => setChargePrice(e.target.value)}
+                  className="input"
+                />
+              </div>
+              {chargeQty > 0 && parseFloat(chargePrice.replace(',', '.')) > 0 && (
+                <div className="rounded-lg bg-dark-800 p-3 text-sm">
+                  <div className="flex justify-between">
+                    <span className="text-dark-400">Total</span>
+                    <span className="font-bold text-gold-400">
+                      {formatCurrency(Math.round(parseFloat(chargePrice.replace(',', '.')) * 100) * chargeQty)}
+                    </span>
+                  </div>
+                </div>
+              )}
+              <button onClick={addCharge} disabled={addingCharge} className="btn-gold w-full">
+                {addingCharge ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
+                Adicionar Encargo
               </button>
             </div>
           </div>

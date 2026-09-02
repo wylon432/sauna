@@ -1,63 +1,67 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { z } from 'zod';
-import bcrypt from 'bcryptjs';
+import { NextResponse } from 'next/server';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/auth';
 import prisma from '@/lib/prisma';
+import bcrypt from 'bcryptjs';
+import { z } from 'zod';
 
 const registerSchema = z.object({
-  name: z.string().min(3, 'Nome deve ter pelo menos 3 caracteres'),
+  name: z.string().min(1, 'Nome é obrigatório'),
   email: z.string().email('Email inválido'),
   password: z.string().min(6, 'Senha deve ter pelo menos 6 caracteres'),
-  phone: z.string().optional(),
+  role: z.enum(['ADMIN', 'FUNCIONARIO']).default('FUNCIONARIO'),
 });
 
-export async function POST(request: NextRequest) {
+async function logAudit(userId: string, action: string, resource: string, resourceId?: string, details?: string) {
+  await prisma.auditLog.create({ data: { userId, action, resource, resourceId, details } });
+}
+
+export async function POST(req: Request) {
   try {
-    const body = await request.json();
-    const data = registerSchema.parse(body);
-
-    const existingUser = await prisma.user.findUnique({
-      where: { email: data.email.toLowerCase().trim() },
-    });
-
-    if (existingUser) {
-      return NextResponse.json(
-        { error: 'Este email já está cadastrado' },
-        { status: 409 }
-      );
+    const session = await getServerSession(authOptions);
+    if (!session?.user) {
+      return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
     }
 
-    const hashedPassword = await bcrypt.hash(data.password, 12);
+    if ((session.user as any).role !== 'ADMIN') {
+      return NextResponse.json({ error: 'Acesso negado' }, { status: 403 });
+    }
+
+    const body = await req.json();
+    const parsed = registerSchema.safeParse(body);
+    if (!parsed.success) {
+      return NextResponse.json({ error: parsed.error.errors[0].message }, { status: 400 });
+    }
+
+    const { name, email, password, role } = parsed.data;
+
+    const existingUser = await prisma.user.findUnique({ where: { email: email.toLowerCase().trim() } });
+    if (existingUser) {
+      return NextResponse.json({ error: 'Email já está em uso' }, { status: 409 });
+    }
+
+    const hashedPassword = await bcrypt.hash(password, 12);
 
     const user = await prisma.user.create({
       data: {
-        name: data.name.trim(),
-        email: data.email.toLowerCase().trim(),
+        name: name.trim(),
+        email: email.toLowerCase().trim(),
         password: hashedPassword,
-        phone: data.phone?.trim() || null,
+        role,
       },
     });
 
-    await prisma.profile.create({
-      data: { userId: user.id },
-    });
+    await logAudit((session.user as any).id, 'CREATE', 'USER', user.id, `Usuário criado: ${user.email}`);
 
-    const { password: _, ...userWithoutPassword } = user;
-
-    return NextResponse.json(
-      { message: 'Conta criada com sucesso', user: userWithoutPassword },
-      { status: 201 }
-    );
-  } catch (error) {
-    if (error instanceof z.ZodError) {
-      return NextResponse.json(
-        { error: error.errors[0].message },
-        { status: 400 }
-      );
-    }
-    console.error('Erro ao criar conta:', error);
-    return NextResponse.json(
-      { error: 'Erro interno do servidor' },
-      { status: 500 }
-    );
+    return NextResponse.json({
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      role: user.role,
+      active: user.active,
+      createdAt: user.createdAt,
+    }, { status: 201 });
+  } catch {
+    return NextResponse.json({ error: 'Erro ao processar solicitação' }, { status: 500 });
   }
 }

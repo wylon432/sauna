@@ -6,469 +6,285 @@ datasource db {
   provider = "sqlite"
 }
 
-// ==================== USERS & AUTH ====================
+// ==================== AUTH ====================
 
 model User {
-  id            String    @id @default(cuid())
-  email         String    @unique
-  name          String
-  phone         String?
-  password      String?
-  image         String?
-  emailVerified DateTime?
-  role          String    @default("CLIENT")
-  active        Boolean   @default(true)
-  twoFactorEnabled Boolean @default(false)
-  twoFactorSecret   String?
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  id        String   @id @default(cuid())
+  name      String
+  email     String   @unique
+  password  String
+  role      String   @default("FUNCIONARIO")
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  profile        Profile?
-  sessions       Session[]
-  saunaReservations    SaunaReservation[]
-  rentalReservations   RentalReservation[]
-  payments            Payment[]
-  reviews             Review[]
-  consumptionRecords  ConsumptionRecord[]
-  termsAcceptances    TermsAcceptance[]
-  auditLogs           AuditLog[]
-  notifications       Notification[]
-  damageRecords       DamageRecord[]
-  announcements       Announcement[]
+  orders           Order[]
+  payments         Payment[]
+  expenses         Expense[]
+  cashRegisters    CashRegister[]
+  closedRegisters  CashRegister[] @relation("ClosedBy")
+  cashMovements    CashMovement[]
+  inventoryMovements InventoryMovement[]
+  manualCharges    ManualCharge[]
+  auditLogs        AuditLog[]
 
   @@index([email])
   @@index([role])
 }
 
-model Profile {
-  id        String  @id @default(cuid())
-  userId    String  @unique
-  address   String?
-  city      String?
-  state     String?
-  zipCode   String?
-  birthDate DateTime?
-  cpf       String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+// ==================== CUSTOMERS ====================
 
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-}
-
-model Session {
-  id           String   @id @default(cuid())
-  userId       String
-  sessionToken String   @unique
-  expires      DateTime
-  
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@index([sessionToken])
-}
-
-// ==================== SAUNA ====================
-
-model SaunaSchedule {
+model Customer {
   id        String   @id @default(cuid())
-  dayOfWeek Int
-  dayName   String
-  gender    String
-  startTime String
-  endTime   String
+  name      String
+  phone     String?
+  email     String?
+  cpf       String?
+  address   String?
+  notes     String?
   active    Boolean  @default(true)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  saunaReservations SaunaReservation[]
+  orders Order[]
+
+  @@index([name])
+  @@index([phone])
+  @@index([cpf])
 }
 
-model SaunaReservation {
-  id          String   @id @default(cuid())
-  userId      String
-  scheduleId  String
-  date        DateTime
-  status      String   @default("CONFIRMED")
-  notes       String?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+// ==================== PRODUCTS ====================
 
-  user     User          @relation(fields: [userId], references: [id])
-  schedule SaunaSchedule @relation(fields: [scheduleId], references: [id])
-  consumptionRecords ConsumptionRecord[]
-  payments Payment[]
+model Category {
+  id    String  @id @default(cuid())
+  name  String  @unique
+  order Int     @default(0)
+  active Boolean @default(true)
 
-  @@unique([scheduleId, date])
-  @@index([date])
-  @@index([status])
+  products Product[]
 }
 
-model SaunaSession {
-  id              String   @id @default(cuid())
-  date            DateTime
-  dayOfWeek       String
-  gender          String
-  initialStock    Int
-  consumedStock   Int      @default(0)
-  remainingStock  Int
-  totalValue      Float    @default(0)
-  receivedValue   Float    @default(0)
-  pendingValue    Float    @default(0)
-  status          String   @default("OPEN")
-  closedAt        DateTime?
-  closedBy        String?
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
-
-  consumptionRecords ConsumptionRecord[]
-}
-
-// ==================== RENTAL ====================
-
-model RentalPackage {
+model Product {
   id          String   @id @default(cuid())
   name        String
-  description String
-  days        Int
-  includesSauna Boolean @default(false)
-  saunaHours  Int      @default(0)
-  price       Float
+  categoryId  String?
+  price       Int      @default(0)
+  cost        Int      @default(0)
+  stock       Int      @default(0)
+  minStock    Int      @default(0)
+  unit        String   @default("UN")
+  code        String?
   active      Boolean  @default(true)
-  sortOrder   Int      @default(0)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  rentalReservations RentalReservation[]
+  category         Category?          @relation(fields: [categoryId], references: [id])
+  orderItems       OrderItem[]
+  inventoryMovements InventoryMovement[]
+
+  @@index([categoryId])
+  @@index([name])
+  @@index([code])
 }
 
-model RentalReservation {
-  id            String   @id @default(cuid())
-  userId        String
-  packageId     String
-  date          DateTime
-  endDate       DateTime?
-  status        String   @default("REQUESTED")
-  totalValue    Float
-  notes         String?
-  adminNotes    String?
-  termsAccepted Boolean  @default(false)
-  termsVersion  String?
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+// ==================== ORDERS (COMANDAS) ====================
 
-  user    User          @relation(fields: [userId], references: [id])
-  package RentalPackage @relation(fields: [packageId], references: [id])
-  payments         Payment[]
-  statusHistory    ReservationStatusHistory[]
-  damageRecords    DamageRecord[]
+model Order {
+  id           String   @id @default(cuid())
+  orderNumber  Int      @unique
+  customerId   String?
+  userId       String
+  status       String   @default("ABERTA")
+  subtotal     Int      @default(0)
+  discount     Int      @default(0)
+  addition     Int      @default(0)
+  total        Int      @default(0)
+  notes        String?
+  createdAt    DateTime @default(now())
+  closedAt     DateTime?
+  updatedAt    DateTime @updatedAt
 
-  @@index([date])
+  customer     Customer?  @relation(fields: [customerId], references: [id])
+  user         User       @relation(fields: [userId], references: [id])
+  items        OrderItem[]
+  manualCharges ManualCharge[]
+  payments     Payment[]
+  cashMovements CashMovement[]
+
   @@index([status])
+  @@index([customerId])
+  @@index([userId])
+  @@index([createdAt])
 }
 
-model ReservationStatusHistory {
-  id              String   @id @default(cuid())
-  reservationId   String
-  oldStatus       String?
-  newStatus       String
-  changedBy       String?
-  reason          String?
-  createdAt       DateTime @default(now())
+model OrderItem {
+  id        String   @id @default(cuid())
+  orderId   String
+  productId String
+  quantity  Int      @default(1)
+  unitPrice Int      @default(0)
+  costPrice Int      @default(0)
+  total     Int      @default(0)
+  createdAt DateTime @default(now())
 
-  reservation RentalReservation @relation(fields: [reservationId], references: [id], onDelete: Cascade)
+  order   Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product Product @relation(fields: [productId], references: [id])
+
+  @@index([orderId])
+  @@index([productId])
+}
+
+model ManualCharge {
+  id          String   @id @default(cuid())
+  orderId     String
+  description String
+  quantity    Int      @default(1)
+  unitPrice   Int      @default(0)
+  total       Int      @default(0)
+  userId      String
+  createdAt   DateTime @default(now())
+
+  order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  user  User  @relation(fields: [userId], references: [id])
+
+  @@index([orderId])
 }
 
 // ==================== PAYMENTS ====================
 
 model Payment {
-  id              String   @id @default(cuid())
-  userId          String
-  rentalReservationId String?
-  saunaReservationId String?
-  type            String
-  method          String
-  amount          Float
-  description     String?
-  status          String   @default("RECEIVED")
-  registeredBy    String?
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
-
-  user            User              @relation(fields: [userId], references: [id])
-  rentalReservation RentalReservation? @relation(fields: [rentalReservationId], references: [id])
-  saunaReservation  SaunaReservation?  @relation(fields: [saunaReservationId], references: [id])
-
-  @@index([type])
-  @@index([status])
-}
-
-model FinancialTransaction {
-  id          String   @id @default(cuid())
-  type        String
-  category    String
-  description String
-  amount      Float
-  date        DateTime @default(now())
-  createdAt   DateTime @default(now())
-}
-
-model Expense {
-  id          String   @id @default(cuid())
-  description String
-  category    String
-  amount      Float
-  date        DateTime @default(now())
-  registeredBy String?
-  createdAt   DateTime @default(now())
-}
-
-// ==================== BEVERAGES ====================
-
-model Beverage {
-  id            String   @id @default(cuid())
-  name          String
-  category      String
-  unit          String   @default("un")
-  price         Float
-  minStock      Int      @default(5)
-  currentStock  Int      @default(0)
-  active        Boolean  @default(true)
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-
-  inventoryMovements   InventoryMovement[]
-  consumptionRecords  ConsumptionRecord[]
-}
-
-model InventoryMovement {
-  id          String   @id @default(cuid())
-  beverageId  String
-  type        String
-  quantity    Int
-  reason      String?
-  performedBy String?
-  createdAt   DateTime @default(now())
-
-  beverage Beverage @relation(fields: [beverageId], references: [id])
-}
-
-model ConsumptionRecord {
-  id              String   @id @default(cuid())
-  beverageId      String
-  saunaReservationId String?
-  saunaSessionId  String?
-  userId          String?
-  quantity        Int
-  unitPrice       Float
-  totalValue      Float
-  paymentStatus   String   @default("PENDING")
-  createdAt       DateTime @default(now())
-
-  beverage         Beverage        @relation(fields: [beverageId], references: [id])
-  saunaReservation SaunaReservation? @relation(fields: [saunaReservationId], references: [id])
-  saunaSession     SaunaSession?     @relation(fields: [saunaSessionId], references: [id])
-  user             User?             @relation(fields: [userId], references: [id])
-}
-
-// ==================== REVIEWS ====================
-
-model Review {
   id        String   @id @default(cuid())
+  orderId   String
   userId    String
-  rating    Int
-  comment   String?
-  status    String   @default("PENDING")
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  user User @relation(fields: [userId], references: [id])
-
-  @@index([status])
-}
-
-// ==================== GALLERY ====================
-
-model GalleryImage {
-  id          String   @id @default(cuid())
-  title       String?
-  description String?
-  url         String
-  thumbnail   String?
-  category    String
-  isMain      Boolean  @default(false)
-  published   Boolean  @default(true)
-  sortOrder   Int      @default(0)
-  uploadedBy  String?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  @@index([category])
-  @@index([published])
-}
-
-// ==================== NEWS ====================
-
-model News {
-  id          String   @id @default(cuid())
-  title       String
-  slug        String   @unique
-  summary     String?
-  content     String
-  image       String?
-  category    String   @default("GERAL")
-  author      String?
-  status      String   @default("DRAFT")
-  featured    Boolean  @default(false)
-  publishedAt DateTime?
-  scheduledAt DateTime?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  @@index([status])
-  @@index([slug])
-  @@index([category])
-}
-
-// ==================== ANNOUNCEMENTS ====================
-
-model Announcement {
-  id        String   @id @default(cuid())
-  text      String
-  service   String
-  startDate DateTime
-  endDate   DateTime
-  active    Boolean  @default(true)
-  createdBy String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  user User? @relation(fields: [createdBy], references: [id])
-
-  @@index([active])
-}
-
-// ==================== TERMS ====================
-
-model TermsVersion {
-  id        String   @id @default(cuid())
-  type      String
-  title     String
-  content   String
-  version   Int
-  active    Boolean  @default(true)
-  author    String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  acceptances TermsAcceptance[]
-}
-
-model TermsAcceptance {
-  id            String   @id @default(cuid())
-  userId        String
-  termsId       String
-  reservationId String?
-  acceptedAt    DateTime @default(now())
-  ipAddress     String?
-
-  user  User          @relation(fields: [userId], references: [id])
-  terms TermsVersion @relation(fields: [termsId], references: [id])
-}
-
-// ==================== CALENDAR ====================
-
-model CalendarBlock {
-  id          String   @id @default(cuid())
-  date        DateTime
-  service     String
-  blocked     Boolean  @default(true)
-  reason      String?
-  createdBy   String?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  @@unique([date, service])
-}
-
-// ==================== CONTENT ====================
-
-model Rules {
-  id        String   @id @default(cuid())
-  type      String
-  content   String
-  version   Int      @default(1)
-  active    Boolean  @default(true)
-  author    String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-}
-
-// ==================== SYSTEM ====================
-
-model SystemSetting {
-  id        String   @id @default(cuid())
-  key       String   @unique
-  value     String
-  category  String   @default("GENERAL")
-  updatedAt DateTime @updatedAt
-
-  @@index([key])
-}
-
-model AuditLog {
-  id        String   @id @default(cuid())
-  userId    String?
-  action    String
-  resource  String
-  resourceId String?
-  details   String?
-  ipAddress String?
+  method    String
+  amount    Int      @default(0)
+  notes     String?
   createdAt DateTime @default(now())
 
-  user User? @relation(fields: [userId], references: [id])
+  order Order @relation(fields: [orderId], references: [id])
+  user  User  @relation(fields: [userId], references: [id])
 
-  @@index([action])
-  @@index([resource])
+  @@index([orderId])
+  @@index([method])
   @@index([createdAt])
 }
 
-model Notification {
+// ==================== EXPENSES ====================
+
+model Expense {
+  id            String   @id @default(cuid())
+  description   String
+  category      String
+  amount        Int      @default(0)
+  date          DateTime @default(now())
+  paymentMethod String   @default("DINHEIRO")
+  notes         String?
+  userId        String
+  createdAt     DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([category])
+  @@index([date])
+}
+
+// ==================== CASH REGISTER ====================
+
+model CashRegister {
+  id            String    @id @default(cuid())
+  status        String    @default("ABERTO")
+  initialValue  Int       @default(0)
+  finalValue    Int?
+  expectedValue Int?
+  difference    Int?
+  userId        String
+  closedById    String?
+  openedAt      DateTime  @default(now())
+  closedAt      DateTime?
+
+  user        User           @relation(fields: [userId], references: [id])
+  closedBy    User?          @relation("ClosedBy", fields: [closedById], references: [id])
+  movements   CashMovement[]
+
+  @@index([status])
+}
+
+model CashMovement {
+  id             String   @id @default(cuid())
+  cashRegisterId String
+  orderId        String?
+  type           String
+  amount         Int      @default(0)
+  description    String?
+  userId         String
+  createdAt      DateTime @default(now())
+
+  cashRegister CashRegister @relation(fields: [cashRegisterId], references: [id])
+  order        Order?       @relation(fields: [orderId], references: [id])
+  user         User         @relation(fields: [userId], references: [id])
+
+  @@index([cashRegisterId])
+  @@index([type])
+}
+
+// ==================== INVENTORY ====================
+
+model InventoryMovement {
   id        String   @id @default(cuid())
-  userId    String
-  title     String
-  message   String
+  productId String
   type      String
-  read      Boolean  @default(false)
-  createdAt DateTime @default(now())
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@index([userId, read])
-}
-
-model DamageRecord {
-  id              String   @id @default(cuid())
-  rentalReservationId String
-  item            String
-  description     String
-  photos          String?
-  value           Float?
-  status          String   @default("REPORTED")
-  createdBy       String?
-  createdAt       DateTime @default(now())
-
-  reservation RentalReservation @relation(fields: [rentalReservationId], references: [id])
-
-  userId String?
-  user   User? @relation(fields: [userId], references: [id])
-}
-
-model PasswordResetToken {
-  id        String   @id @default(cuid())
-  token     String   @unique
+  quantity  Int      @default(0)
+  reference String?
+  notes     String?
   userId    String
-  expires   DateTime
-  used      Boolean  @default(false)
   createdAt DateTime @default(now())
 
-  @@index([token])
+  product Product @relation(fields: [productId], references: [id])
+  user    User    @relation(fields: [userId], references: [id])
+
+  @@index([productId])
+  @@index([type])
+  @@index([createdAt])
+}
+
+// ==================== AUDIT ====================
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  userId     String?
+  action     String
+  resource   String
+  resourceId String?
+  details    String?
+  ip         String?
+  createdAt  DateTime @default(now())
+
+  user User? @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@index([resource])
+  @@index([action])
+  @@index([createdAt])
+}
+
+model LoginAttempt {
+  id        String   @id @default(cuid())
+  email     String
+  ip        String?
+  success   Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@index([email])
+  @@index([ip])
+  @@index([createdAt])
+}
+
+// ==================== SETTINGS ====================
+
+model SystemSetting {
+  id    String @id @default(cuid())
+  key   String @unique
+  value String
+
+  @@index([key])
 }

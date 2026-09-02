@@ -1,186 +1,289 @@
 'use client';
 
-import { useSession } from 'next-auth/react';
-import { useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import {
-  Loader2,
-  Search,
-  Eye,
-  UserCheck,
-  UserX,
-  X,
-  Mail,
-  Phone,
+  Loader2, Plus, Search, Users, Edit2, Trash2, X, AlertCircle, Phone, Mail, MapPin,
 } from 'lucide-react';
-import { formatDate, RESERVATION_STATUS } from '@/lib/utils';
 
-interface UserData {
+interface Customer {
   id: string;
   name: string;
-  email: string;
-  phone?: string;
-  role: string;
+  phone: string | null;
+  email: string | null;
+  cpf: string | null;
+  address: string | null;
+  notes: string | null;
   active: boolean;
-  createdAt: string;
-  rentalReservations: { id: string; date: string; status: string; totalValue: number; package: { name: string } }[];
-  saunaReservations: { id: string; date: string; status: string }[];
-  payments: { id: string; amount: number; status: string }[];
+  _count?: { orders: number };
 }
 
+interface FormData {
+  name: string;
+  phone: string;
+  email: string;
+  cpf: string;
+  address: string;
+  notes: string;
+}
+
+const emptyForm: FormData = { name: '', phone: '', email: '', cpf: '', address: '', notes: '' };
+
 export default function ClientesPage() {
-  const { data: session, status } = useSession();
-  const router = useRouter();
-  const [users, setUsers] = useState<UserData[]>([]);
+  const [customers, setCustomers] = useState<Customer[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
   const [search, setSearch] = useState('');
-  const [selectedUser, setSelectedUser] = useState<UserData | null>(null);
+  const [searchDebounce, setSearchDebounce] = useState('');
+
+  const [showModal, setShowModal] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [form, setForm] = useState<FormData>(emptyForm);
+  const [saving, setSaving] = useState(false);
+  const [formErrors, setFormErrors] = useState<Record<string, string>>({});
+
+  const fetchCustomers = useCallback(async () => {
+    try {
+      const url = searchDebounce ? `/api/customers?search=${encodeURIComponent(searchDebounce)}` : '/api/customers';
+      const res = await fetch(url);
+      if (!res.ok) throw new Error('Erro ao carregar clientes');
+      const data = await res.json();
+      setCustomers(data);
+    } catch (e: any) {
+      setError(e.message);
+    } finally {
+      setLoading(false);
+    }
+  }, [searchDebounce]);
+
+  useEffect(() => { fetchCustomers(); }, [fetchCustomers]);
 
   useEffect(() => {
-    if (status === 'unauthenticated') router.push('/login');
-  }, [status, router]);
+    const t = setTimeout(() => setSearchDebounce(search), 300);
+    return () => clearTimeout(t);
+  }, [search]);
 
-  useEffect(() => {
-    fetch('/api/admin/clients')
-      .then((r) => r.json())
-      .then((d) => setUsers(d.users || []))
-      .catch(() => {})
-      .finally(() => setLoading(false));
-  }, []);
-
-  const handleToggleActive = async (id: string) => {
-    await fetch(`/api/admin/clients/${id}/toggle`, { method: 'PUT' });
-    setUsers((prev) => prev.map((u) => (u.id === id ? { ...u, active: !u.active } : u)));
-    if (selectedUser?.id === id) setSelectedUser((prev) => prev ? { ...prev, active: !prev.active } : null);
+  const openCreate = () => {
+    setEditingId(null);
+    setForm(emptyForm);
+    setFormErrors({});
+    setShowModal(true);
   };
 
-  const filtered = users.filter(
-    (u) =>
-      u.name.toLowerCase().includes(search.toLowerCase()) ||
-      u.email.toLowerCase().includes(search.toLowerCase()) ||
-      u.phone?.includes(search)
-  );
+  const openEdit = (c: Customer) => {
+    setEditingId(c.id);
+    setForm({
+      name: c.name,
+      phone: c.phone || '',
+      email: c.email || '',
+      cpf: c.cpf || '',
+      address: c.address || '',
+      notes: c.notes || '',
+    });
+    setFormErrors({});
+    setShowModal(true);
+  };
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center py-20">
-        <Loader2 className="h-8 w-8 animate-spin text-sauna-600" />
-      </div>
-    );
-  }
+  const validate = (): boolean => {
+    const errs: Record<string, string> = {};
+    if (!form.name.trim()) errs.name = 'Nome é obrigatório';
+    if (form.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) errs.email = 'Email inválido';
+    setFormErrors(errs);
+    return Object.keys(errs).length === 0;
+  };
+
+  const handleSubmit = async () => {
+    if (!validate()) return;
+    setSaving(true);
+    try {
+      const body = {
+        name: form.name.trim(),
+        phone: form.phone.trim() || null,
+        email: form.email.trim() || null,
+        cpf: form.cpf.trim() || null,
+        address: form.address.trim() || null,
+        notes: form.notes.trim() || null,
+      };
+
+      const url = editingId ? `/api/customers/${editingId}` : '/api/customers';
+      const method = editingId ? 'PUT' : 'POST';
+
+      const res = await fetch(url, {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || 'Erro ao salvar');
+      }
+      setShowModal(false);
+      fetchCustomers();
+    } catch (e: any) {
+      setError(e.message);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleDelete = async (id: string, name: string) => {
+    if (!window.confirm(`Desativar cliente "${name}"?`)) return;
+    try {
+      const res = await fetch(`/api/customers/${id}`, { method: 'DELETE' });
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || 'Erro ao remover');
+      }
+      fetchCustomers();
+    } catch (e: any) {
+      setError(e.message);
+    }
+  };
 
   return (
-    <div className="space-y-6">
-      <h1 className="text-2xl font-bold text-gray-900">Clientes</h1>
-
-      <div className="admin-card">
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
-          <input
-            className="input pl-10"
-            placeholder="Buscar por nome, email ou telefone..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-          />
+    <div className="space-y-4">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h1 className="text-xl font-bold text-white">Clientes</h1>
+          <p className="text-sm text-dark-400">{customers.length} cliente(s)</p>
         </div>
+        <button onClick={openCreate} className="btn-gold">
+          <Plus className="h-4 w-4" /> Novo Cliente
+        </button>
       </div>
 
-      <div className="admin-card overflow-x-auto">
-        <table className="w-full">
-          <thead>
-            <tr>
-              <th className="table-header">Nome</th>
-              <th className="table-header">Email</th>
-              <th className="table-header">Telefone</th>
-              <th className="table-header">Tipo</th>
-              <th className="table-header">Status</th>
-              <th className="table-header">Ações</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y">
-            {filtered.map((u) => (
-              <tr key={u.id}>
-                <td className="table-cell font-medium">{u.name}</td>
-                <td className="table-cell">{u.email}</td>
-                <td className="table-cell">{u.phone || '-'}</td>
-                <td className="table-cell">
-                  <span className={`badge ${u.role === 'ADMIN' ? 'bg-purple-100 text-purple-800' : 'bg-blue-100 text-blue-800'}`}>
-                    {u.role}
-                  </span>
-                </td>
-                <td className="table-cell">
-                  <button onClick={() => handleToggleActive(u.id)} className={`badge cursor-pointer ${u.active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
-                    {u.active ? 'Ativo' : 'Inativo'}
-                  </button>
-                </td>
-                <td className="table-cell">
-                  <button onClick={() => setSelectedUser(u)} className="rounded p-1 text-blue-600 hover:bg-blue-50">
-                    <Eye className="h-4 w-4" />
-                  </button>
-                </td>
+      {error && (
+        <div className="flex items-center gap-2 rounded-lg border border-red-600/30 bg-red-600/10 p-3 text-sm text-red-400">
+          <AlertCircle className="h-4 w-4 shrink-0" />
+          <span>{error}</span>
+          <button onClick={() => setError('')} className="ml-auto"><X className="h-4 w-4" /></button>
+        </div>
+      )}
+
+      <div className="relative">
+        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-dark-500" />
+        <input
+          type="text"
+          placeholder="Buscar por nome, telefone..."
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className="input pl-10"
+        />
+      </div>
+
+      {loading ? (
+        <div className="flex h-40 items-center justify-center">
+          <Loader2 className="h-6 w-6 animate-spin text-gold-500" />
+        </div>
+      ) : customers.length === 0 ? (
+        <div className="card flex flex-col items-center py-12">
+          <Users className="mb-3 h-10 w-10 text-dark-600" />
+          <p className="text-sm text-dark-500">Nenhum cliente encontrado</p>
+        </div>
+      ) : (
+        <div className="card overflow-x-auto p-0">
+          <table className="w-full text-left text-sm">
+            <thead>
+              <tr className="border-b border-dark-800 text-dark-400">
+                <th className="px-4 py-3 font-medium">Nome</th>
+                <th className="px-4 py-3 font-medium hidden sm:table-cell">Telefone</th>
+                <th className="px-4 py-3 font-medium hidden md:table-cell">Email</th>
+                <th className="px-4 py-3 font-medium hidden lg:table-cell">CPF</th>
+                <th className="px-4 py-3 font-medium text-center">Pedidos</th>
+                <th className="px-4 py-3 font-medium text-right">Ações</th>
               </tr>
-            ))}
-            {filtered.length === 0 && (
-              <tr><td colSpan={6} className="table-cell text-center text-gray-500">Nenhum cliente encontrado.</td></tr>
-            )}
-          </tbody>
-        </table>
-      </div>
+            </thead>
+            <tbody>
+              {customers.map((c) => (
+                <tr key={c.id} className="table-row">
+                  <td className="px-4 py-3">
+                    <p className="font-medium text-white">{c.name}</p>
+                    <p className="text-xs text-dark-500 sm:hidden">{c.phone || '—'}</p>
+                  </td>
+                  <td className="px-4 py-3 text-dark-300 hidden sm:table-cell">{c.phone || '—'}</td>
+                  <td className="px-4 py-3 text-dark-300 hidden md:table-cell">{c.email || '—'}</td>
+                  <td className="px-4 py-3 text-dark-300 hidden lg:table-cell">{c.cpf || '—'}</td>
+                  <td className="px-4 py-3 text-center">
+                    <span className="badge-gold">{c._count?.orders ?? 0}</span>
+                  </td>
+                  <td className="px-4 py-3 text-right">
+                    <div className="flex items-center justify-end gap-1">
+                      <button onClick={() => openEdit(c)} className="rounded p-1.5 text-dark-400 hover:text-gold-400 hover:bg-dark-800">
+                        <Edit2 className="h-4 w-4" />
+                      </button>
+                      <button onClick={() => handleDelete(c.id, c.name)} className="rounded p-1.5 text-dark-400 hover:text-red-400 hover:bg-dark-800">
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
 
-      {selectedUser && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-xl bg-white p-6 shadow-xl">
-            <div className="mb-4 flex items-center justify-between">
-              <h3 className="text-lg font-bold">Detalhes do Cliente</h3>
-              <button onClick={() => setSelectedUser(null)} className="text-gray-400 hover:text-gray-600"><X className="h-5 w-5" /></button>
+      {showModal && (
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/70 sm:items-center sm:p-4">
+          <div className="w-full max-w-lg rounded-t-xl bg-dark-900 border border-dark-800 sm:rounded-xl">
+            <div className="flex items-center justify-between border-b border-dark-800 p-4">
+              <h3 className="text-sm font-semibold text-white">{editingId ? 'Editar Cliente' : 'Novo Cliente'}</h3>
+              <button onClick={() => setShowModal(false)} className="rounded p-1 text-dark-400 hover:text-white">
+                <X className="h-4 w-4" />
+              </button>
             </div>
-            <div className="space-y-4">
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <div className="p-4 space-y-3">
+              <div>
+                <label className="label">Nome *</label>
+                <input
+                  type="text"
+                  value={form.name}
+                  onChange={(e) => setForm({ ...form, name: e.target.value })}
+                  className={`input ${formErrors.name ? 'border-red-600' : ''}`}
+                  autoFocus
+                />
+                {formErrors.name && <p className="mt-1 text-xs text-red-400">{formErrors.name}</p>}
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <p className="text-sm text-gray-500">Nome</p>
-                  <p className="font-medium">{selectedUser.name}</p>
+                  <label className="label">Telefone</label>
+                  <input type="text" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} className="input" placeholder="(00) 00000-0000" />
                 </div>
                 <div>
-                  <p className="text-sm text-gray-500">Email</p>
-                  <p className="flex items-center gap-1 font-medium"><Mail className="h-3 w-3" /> {selectedUser.email}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-gray-500">Telefone</p>
-                  <p className="flex items-center gap-1 font-medium"><Phone className="h-3 w-3" /> {selectedUser.phone || '-'}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-gray-500">Cadastro</p>
-                  <p className="font-medium">{formatDate(selectedUser.createdAt)}</p>
+                  <label className="label">CPF</label>
+                  <input type="text" value={form.cpf} onChange={(e) => setForm({ ...form, cpf: e.target.value })} className="input" placeholder="000.000.000-00" />
                 </div>
               </div>
-
-              {selectedUser.rentalReservations.length > 0 && (
-                <div>
-                  <h4 className="mb-2 font-semibold">Reservas de Aluguel</h4>
-                  <div className="space-y-1">
-                    {selectedUser.rentalReservations.map((r) => (
-                      <div key={r.id} className="flex items-center justify-between rounded border p-2 text-sm">
-                        <span>{formatDate(r.date)} - {r.package?.name}</span>
-                        <span className={`badge ${RESERVATION_STATUS[r.status]?.color}`}>{RESERVATION_STATUS[r.status]?.label}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {selectedUser.saunaReservations.length > 0 && (
-                <div>
-                  <h4 className="mb-2 font-semibold">Reservas de Sauna</h4>
-                  <div className="space-y-1">
-                    {selectedUser.saunaReservations.map((r) => (
-                      <div key={r.id} className="flex items-center justify-between rounded border p-2 text-sm">
-                        <span>{formatDate(r.date)}</span>
-                        <span className={`badge ${r.status === 'CONFIRMED' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>{r.status}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
+              <div>
+                <label className="label">Email</label>
+                <input
+                  type="email"
+                  value={form.email}
+                  onChange={(e) => setForm({ ...form, email: e.target.value })}
+                  className={`input ${formErrors.email ? 'border-red-600' : ''}`}
+                  placeholder="email@exemplo.com"
+                />
+                {formErrors.email && <p className="mt-1 text-xs text-red-400">{formErrors.email}</p>}
+              </div>
+              <div>
+                <label className="label">Endereço</label>
+                <input type="text" value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} className="input" />
+              </div>
+              <div>
+                <label className="label">Observações</label>
+                <textarea
+                  value={form.notes}
+                  onChange={(e) => setForm({ ...form, notes: e.target.value })}
+                  className="input"
+                  rows={2}
+                />
+              </div>
+              <div className="flex gap-3 pt-2">
+                <button onClick={() => setShowModal(false)} className="btn-outline flex-1">Cancelar</button>
+                <button onClick={handleSubmit} disabled={saving} className="btn-gold flex-1">
+                  {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+                  {editingId ? 'Salvar' : 'Criar'}
+                </button>
+              </div>
             </div>
           </div>
         </div>

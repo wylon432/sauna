@@ -1,57 +1,55 @@
-export function getWhatsAppLink(phone: string, message: string): string {
-  const cleanPhone = phone.replace(/\D/g, '');
-  const encodedMessage = encodeURIComponent(message);
-  return `https://wa.me/55${cleanPhone}?text=${encodedMessage}`;
+import { clsx, type ClassValue } from 'clsx';
+
+export function cn(...inputs: ClassValue[]) {
+  return clsx(inputs);
 }
 
-export function formatCurrency(value: number): string {
-  return new Intl.NumberFormat('pt-BR', {
-    style: 'currency',
-    currency: 'BRL',
-  }).format(value);
+export function formatCurrency(cents: number): string {
+  return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(cents / 100);
+}
+
+export function parseCurrencyToCents(value: string): number {
+  const cleaned = value.replace(/[^\d,]/g, '').replace(',', '.');
+  return Math.round(parseFloat(cleaned || '0') * 100);
 }
 
 export function formatDate(date: Date | string): string {
-  return new Date(date).toLocaleDateString('pt-BR');
+  return new Intl.DateTimeFormat('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' }).format(new Date(date));
 }
 
 export function formatDateTime(date: Date | string): string {
-  return new Date(date).toLocaleString('pt-BR');
+  return new Intl.DateTimeFormat('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }).format(new Date(date));
 }
 
-export function slugify(text: string): string {
-  return text
-    .toLowerCase()
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/(^-|-$)+/g, '');
+export function formatTime(date: Date | string): string {
+  return new Intl.DateTimeFormat('pt-BR', { hour: '2-digit', minute: '2-digit' }).format(new Date(date));
 }
 
-export const RESERVATION_STATUS: Record<string, { label: string; color: string }> = {
-  REQUESTED: { label: 'Solicitada', color: 'bg-yellow-100 text-yellow-800' },
-  PRE_RESERVED: { label: 'Pré-reserva', color: 'bg-orange-100 text-orange-800' },
-  AWAITING_SIGNAL: { label: 'Aguardando Sinal', color: 'bg-amber-100 text-amber-800' },
-  CONFIRMED: { label: 'Confirmada', color: 'bg-green-100 text-green-800' },
-  PARTIAL_PAYMENT: { label: 'Pagamento Parcial', color: 'bg-blue-100 text-blue-800' },
-  FULL_PAYMENT: { label: 'Pagamento Completo', color: 'bg-emerald-100 text-emerald-800' },
-  CANCELLED: { label: 'Cancelada', color: 'bg-red-100 text-red-800' },
-  COMPLETED: { label: 'Concluída', color: 'bg-gray-100 text-gray-800' },
-};
+export function timeAgo(date: Date | string): string {
+  const diff = Date.now() - new Date(date).getTime();
+  const minutes = Math.floor(diff / 60000);
+  if (minutes < 1) return 'agora';
+  if (minutes < 60) return `${minutes}min`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours}h`;
+  const days = Math.floor(hours / 24);
+  if (days < 7) return `${days}d`;
+  return formatDate(date);
+}
 
-export const SAUNA_STATUS: Record<string, { label: string; color: string }> = {
-  CONFIRMED: { label: 'Confirmada', color: 'bg-green-100 text-green-800' },
-  CANCELLED: { label: 'Cancelada', color: 'bg-red-100 text-red-800' },
-  COMPLETED: { label: 'Concluída', color: 'bg-gray-100 text-gray-800' },
-};
+export const PAYMENT_METHODS = [
+  { value: 'PIX', label: 'PIX' },
+  { value: 'DINHEIRO', label: 'Dinheiro' },
+  { value: 'DEBITO', label: 'Débito' },
+  { value: 'CREDITO', label: 'Crédito' },
+  { value: 'OUTRO', label: 'Outro' },
+];
 
-export const GENDERS: Record<string, string> = {
-  FEMININO: 'Feminino',
-  MASCULINO: 'Masculino',
-};
+export const EXPENSE_CATEGORIES = [
+  'Energia', 'Água', 'Funcionários', 'Limpeza', 'Manutenção',
+  'Compras', 'Fornecedores', 'Marketing', 'Impostos', 'Outros',
+];
 
-export const DAYS_OF_WEEK = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'];
+export const ORDER_STATUSES = ['ABERTA', 'PENDENTE', 'FECHADA', 'CANCELADA'];
 
-export const GALLERY_CATEGORIES = ['SAUNA', 'PISCINA', 'ALUGUEL', 'FESTAS', 'AREA_EXTERNA', 'GERAL'];
-export const NEWS_CATEGORIES = ['GERAL', 'SAUNA', 'PISCINA', 'ALUGUEL'];
-export const TERMS_TYPES = ['SAUNA', 'ALUGUEL', 'PRIVACIDADE', 'CANCELAMENTO'];
+export const INVENTORY_TYPES = ['ENTRADA', 'VENDA', 'AJUSTE', 'PERDA', 'ESTORNO'];
